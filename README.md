@@ -87,8 +87,11 @@ User Role: Regular users have limited access to certain commands.
 If you'd like to contribute to this bot, feel free to fork the repository and submit a pull request. Here are some ways you can contribute:
 
 Add new commands to the bot.
+
 Improve the error handling and messages.
+
 Fix bugs or improve code efficiency.
+
 Suggest new features.
 
 ### License
@@ -97,5 +100,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ### Support
 If you encounter any issues or need help, feel free to open an issue on this repository.
 
-Feel free to update the `README.md` with your project-specific details, such as the actual GitHub repository URL and any specific information regarding the bot's functionality.
+Feel free to update the `README.md` with your project-specific details, such as the specific information regarding the bot's functionality.
 
