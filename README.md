@@ -79,9 +79,13 @@ async def setup(bot):
 The bot will automatically load any new commands placed in the cmds folder when it starts. Just create the new file, and you're good to go.
 
 #### Bot Permissions
-Admin/Owner Role: This role has unrestricted access to all commands.
-Mod Role: This role has access to specific commands such as clearing messages.
-User Role: Regular users have limited access to certain commands.
+`dev Role`: This role has unrestricted access to all commands.
+
+`mod Role`: This role has access to specific commands such as clearing messages.
+
+`bot user`: This role has limited access to certain commands or what you wish to choose.
+
+`everyone`: This role has limited access to certain commands or what you wish to choose.
 
 ### Contributing
 If you'd like to contribute to this bot, feel free to fork the repository and submit a pull request. Here are some ways you can contribute:
