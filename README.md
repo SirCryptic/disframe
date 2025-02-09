@@ -97,14 +97,32 @@ This removes the command from memory until it’s loaded again.
 ```
 -reload_all
 ```
-#### Bot Permissions
-`dev Role`: This role has unrestricted access to most commands (eg they can lock and unlock the bot) except from anything to do with `adminhelp` page.
+## Bot Permissions
 
-`mod Role`: This role has access to specific commands such as clearing messages.
+### **Owner**
+- **Access**: The owner can DM the bot directly for any queries or requests, including management tasks eg reloading cmds.
+- **Important**: To set the owner of the bot, you need to update the `OWNER_ID` in the `config.py` file.
+  - **How to set**: Open your `config.py` file and locate the `OWNER_ID` variable. Set this value to the Discord User ID of the bot owner.
+```
+  OWNER_ID = your_discord_user_id_here
+```
 
-`bot user`: This role has limited access to certain commands or what you wish to choose.
+### **dev**
+- **Access**: Unrestricted access to most commands (e.g., lock and unlock the bot).
+- **Exclusions**: Users with this role are **excluded** from accessing the `adminhelp` page or any admin-specific commands.
+- **Usage**: This role is typically granted to trusted users who need to manage and configure the bot, but without the ability to access sensitive administrative help commands.
 
-`everyone`: This role has limited access to certain commands or what you wish to choose.
+### **mod**
+- **Access**: Moderators with this role have access to certain commands that help manage the server, such as clearing messages or enforcing server rules.
+- **Usage**: Ideal for users who need to help moderate the server.
+
+### **bot user**
+- **Access**: Limited access to a set of basic commands that are non-admin and non-moderator in nature.
+- **Usage**: This role is typically assigned to bots or users that need minimal interaction with the bot.
+
+### **everyone**
+- **Access**: This role has the most limited access, with only basic commands allowed.
+- **Usage**: This role is assigned to every server member who should not have special privileges or advanced access.
 
 ### Contributing
 If you'd like to contribute to this bot, feel free to fork the repository and submit a pull request. Here are some ways you can contribute:
