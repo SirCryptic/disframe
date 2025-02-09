@@ -98,7 +98,7 @@ This removes the command from memory until it’s loaded again.
 -reload_all
 ```
 #### Bot Permissions
-`dev Role`: This role has unrestricted access to all commands.
+`dev Role`: This role has unrestricted access to most commands (eg they can lock and unlock the bot) except from anything to do with `adminhelp` page.
 
 `mod Role`: This role has access to specific commands such as clearing messages.
 
