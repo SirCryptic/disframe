@@ -10,6 +10,12 @@ class ServerInfo(commands.Cog):
     @commands.command(name="serverinfo")
     async def serverinfo(self, ctx):
         """Displays server information."""
+        
+        # Prevent the command from being used in DMs
+        if isinstance(ctx.channel, discord.DMChannel):
+            await ctx.send("This command cannot be used in DMs. Please use it in a server.")
+            return
+
         try:
             # Get the guild (server) information
             guild = ctx.guild
