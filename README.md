@@ -4,11 +4,11 @@ A modular and extensible Discord bot framework that allows easy customization by
 ## Features
 
 - **Modular Command Structure**: Add new commands by creating Python files in the `cmds` directory.
-- **Role-based Permissions**: Commands can be restricted to specific roles like `mod`, `dev`, or `user`.
-- **Automatic Role Creation**: The bot will automatically create `dev`, `mod`, and `user` roles if they do not exist.
-- **Message Deletion Command**: Clear a specified number of messages (10-100) with one simple command.
-- **Self-Deleting Messages**: Error and success messages delete themselves after a specified time.
-- **DM Disabled**: The bot does not respond to direct messages, ensuring it only works in servers.
+- **Role-based Permissions**: Commands can be restricted to specific roles like `mod`, `dev`, or `bot user`.
+- **Automatic Role Creation**: The bot will automatically create `dev`, `mod`, and `bot user` roles if they do not exist.
+- **Help System with Pagination**: A clean and organized help command with interactive buttons for navigation.
+- **Developer & Mod Commands**: Exclusive commands for bot admins and moderators.
+- **DM Restrictions**: Commands are primarily executed in servers, ensuring the bot functions securely within guilds.
 
 ## Requirements
 
@@ -34,7 +34,7 @@ pip install -r requirements.txt
 ```
 
 ### 3. Set up your bot token
-Create a config.py file in the root directory and add your Discord bot token:
+Create a config.py file in the root directory and add your Discord bot token(you will also find a example with everything you need in the repo.):
 
 ```python
 # config.py
@@ -75,9 +75,28 @@ class NewCommand(commands.Cog):
 async def setup(bot):
     await bot.add_cog(NewCommand(bot))
 ```
-### Loading the Command
-The bot will automatically load any new commands placed in the cmds folder when it starts. Just create the new file, and you're good to go.
+### Loading and Managing Commands  
 
+DisFrame automatically loads any new commands placed in the `cmds` folder when it starts. Simply add a new file, restart the bot, and it’s ready to use!  
+
+Additionally, you can now **dynamically load, unload, and reload modules** without restarting the bot.  
+
+####  Load a New Command Manually  
+```bash
+-load cmds.new_command
+```
+This will load cmds/new_command.py dynamically.
+
+ Unload a Command
+```bash
+-unload cmds.new_command
+```
+This removes the command from memory until it’s loaded again.
+
+ Reload all Commands in cmds folder execpt mod & dev
+```
+-reload_all
+```
 #### Bot Permissions
 `dev Role`: This role has unrestricted access to all commands.
 
