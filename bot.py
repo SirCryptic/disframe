@@ -149,7 +149,7 @@ async def on_command_error(ctx, error):
             description=f"You need the **{error.missing_role}** role to use this command.",
             color=discord.Color.red(),
         )
-        await ctx.send(embed=embed)
+        error_message = await ctx.send(embed=embed)
 
     elif isinstance(error, commands.MissingRequiredArgument):
         embed = discord.Embed(
@@ -162,7 +162,7 @@ async def on_command_error(ctx, error):
             value=f"Use `{BOT_PREFIX}help {ctx.command}` for more details.",
             inline=False,
         )
-        await ctx.send(embed=embed)
+        error_message = await ctx.send(embed=embed)
 
     elif isinstance(error, commands.CommandNotFound):
         embed = discord.Embed(
@@ -170,7 +170,7 @@ async def on_command_error(ctx, error):
             description=f"That command does not exist. Use `{BOT_PREFIX}help` to see available commands.",
             color=discord.Color.orange(),
         )
-        await ctx.send(embed=embed)
+        error_message = await ctx.send(embed=embed)
 
     elif isinstance(error, commands.CommandInvokeError):
         embed = discord.Embed(
@@ -179,7 +179,7 @@ async def on_command_error(ctx, error):
             color=discord.Color.red(),
         )
         embed.add_field(name="Details", value=str(error.original), inline=False)
-        await ctx.send(embed=embed)
+        error_message = await ctx.send(embed=embed)
 
     elif isinstance(error, commands.CheckFailure):
         embed = discord.Embed(
@@ -187,7 +187,7 @@ async def on_command_error(ctx, error):
             description="You do not have permission to run this command.",
             color=discord.Color.red(),
         )
-        await ctx.send(embed=embed)
+        error_message = await ctx.send(embed=embed)
 
     elif isinstance(error, commands.CommandOnCooldown):
         # Handle the cooldown error separately
@@ -196,7 +196,7 @@ async def on_command_error(ctx, error):
             description=f"❌ You are on cooldown. Try again in `{error.retry_after:.2f}` seconds.",
             color=discord.Color.orange(),
         )
-        await ctx.send(embed=embed)
+        error_message = await ctx.send(embed=embed)
 
     else:
         embed = discord.Embed(
@@ -205,7 +205,14 @@ async def on_command_error(ctx, error):
             color=discord.Color.red(),
         )
         embed.add_field(name="Error Details", value=str(error), inline=False)
-        await ctx.send(embed=embed)
+        error_message = await ctx.send(embed=embed)
+
+    # Cleanup the error message after 5 seconds
+    await asyncio.sleep(5)
+    try:
+        await error_message.delete()
+    except discord.errors.NotFound:
+        pass  # Ignore if the message is already deleted
 
     print(f"[ERROR] Command error: {error}")
 
