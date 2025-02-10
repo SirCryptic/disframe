@@ -3,7 +3,7 @@ from discord.ext import commands
 import os
 import json
 import asyncio
-from config import OWNER_ID, BOT_PREFIX
+from config import OWNER_ID, BOT_PREFIX, MOD_ROLE
 
 class Mod(commands.Cog):
     """Moderation commands such as kick, ban, mute, etc."""
@@ -253,13 +253,12 @@ class Mod(commands.Cog):
     @commands.group(name='modhelp', invoke_without_command=True)
     async def mod_help_group(self, ctx):
         """Display help for moderation commands."""
-        
+
         # Check if the user has the "mod" role
-        mod_role_name = "mod"  # Replace with your actual mod role name
-        mod_role = discord.utils.get(ctx.guild.roles, name=mod_role_name)
+        mod_role = discord.utils.get(ctx.guild.roles, name=MOD_ROLE)
         if mod_role not in ctx.author.roles:  # If the user doesn't have the "mod" role
             appeal_message = await ctx.send(
-                f"{BOT_PREFIX}modhelp: You need the '{mod_role_name}' role to access the moderation commands."
+                f"{BOT_PREFIX}modhelp: You need the ```{MOD_ROLE}``` role to access the moderation commands."
             )
             await asyncio.sleep(5)  # Wait for 5 seconds before deleting the message
             await appeal_message.delete()  # Delete the appeal message
