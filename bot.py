@@ -189,6 +189,15 @@ async def on_command_error(ctx, error):
         )
         await ctx.send(embed=embed)
 
+    elif isinstance(error, commands.CommandOnCooldown):
+        # Handle the cooldown error separately
+        embed = discord.Embed(
+            title="Cooldown",
+            description=f"❌ You are on cooldown. Try again in `{error.retry_after:.2f}` seconds.",
+            color=discord.Color.orange(),
+        )
+        await ctx.send(embed=embed)
+
     else:
         embed = discord.Embed(
             title="Unexpected Error",
