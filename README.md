@@ -93,10 +93,16 @@ This will load cmds/new_command.py dynamically.
 ```
 This removes the command from memory until it’s loaded again.
 
- Reload all Commands in cmds folder execpt mod & dev
+ Reload all Commands in cmds folder execpt mod & dev or any folder
 ```
 -reload_all
 ```
+
+ Reload a command
+```
+-reload
+```
+
 ## Bot Permissions
 
 ### **Owner**
