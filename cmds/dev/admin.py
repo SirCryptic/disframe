@@ -11,7 +11,7 @@ import discord
 import os
 import copy
 
-from config import OWNER_ID, BOT_PREFIX
+from config import OWNER_ID, BOT_PREFIX, BOT_NAME, BOT_VERSION
 
 class Admin(commands.Cog):
     """Admin-only commands for managing bot functionality."""
@@ -108,7 +108,7 @@ class Admin(commands.Cog):
 
     @commands.command(hidden=True)
     async def restart(self, ctx: commands.Context):
-        """Restart the bot."""
+        """Restarts the bot."""
         if ctx.author.id == self.allowed_user_id:  # Only allow the allowed user to restart the bot
             await ctx.send(f"{BOT_PREFIX}restart: Restarting the bot...")
             await self.bot.close()  # Close the bot (this will stop it)
@@ -127,25 +127,50 @@ class Admin(commands.Cog):
                     except Exception as e:
                         await ctx.send(f"{BOT_PREFIX}reload_all: Failed to reload {module}: {e}")
 
+    @commands.command(hidden=True)
+    async def reload(self, ctx: commands.Context, *, module: str):
+        """Reload a specific module."""
+        try:
+            await self.bot.reload_extension(module)
+            await ctx.send(f"{BOT_PREFIX}reload: Reloaded {module} successfully!")
+        except Exception as e:
+            await ctx.send(f"{BOT_PREFIX}reload: Failed to reload module: {e}")
+
     @commands.group(name='adminhelp', invoke_without_command=True)
     async def admin_help_group(self, ctx: commands.Context):
-        """Base help command for displaying available admin commands."""
-        if ctx.author.id == self.allowed_user_id:  # Only the owner can access the help group
+         """Base help command for displaying available admin commands."""
+         if ctx.author.id == self.allowed_user_id:  # Only the owner can access the help group
             embed = discord.Embed(
-                title="Admin Commands Help",
-                description="List of available admin commands. These are available only to the bot owner.",
-                color=discord.Color.green()
+            title="Admin Commands Help",
+            description="List of available admin commands. These are available only to the bot owner.",
+            color=discord.Color.green()
             )
-            embed.add_field(name=f"{BOT_PREFIX}load <module>", value="Loads a specified cog/module.", inline=False)
-            embed.add_field(name=f"{BOT_PREFIX}unload <module>", value="Unloads a specified cog/module.", inline=False)
-            embed.add_field(name=f"{BOT_PREFIX}eval <code>", value="Executes Python code (useful for testing code snippets).", inline=False)
-            embed.add_field(name=f"{BOT_PREFIX}sh <command>", value="Runs a shell command and sends the output.", inline=False)
-            embed.add_field(name=f"{BOT_PREFIX}sudo <channel> <user> <command>", value="Run a command as another user.", inline=False)
-            embed.add_field(name=f"{BOT_PREFIX}restart", value="Restarts the bot.", inline=False)
-            embed.add_field(name=f"{BOT_PREFIX}reload_all", value="Reloads all modules (cmds).", inline=False)
+            embed.add_field(name="🧑‍💻 " + f"{BOT_PREFIX}eval <code>", value="Executes Python code (useful for testing code snippets).", inline=False)
+            embed.add_field(name="🖥️ " + f"{BOT_PREFIX}sh <command>", value="Runs a shell command and sends the output.", inline=False)
+            embed.add_field(name="👤 " + f"{BOT_PREFIX}sudo <channel> <user> <command>", value="Run a command as another user.", inline=False)
+            embed.add_field(name="🔄 " + f"{BOT_PREFIX}restart", value="Restarts the bot.", inline=False)
+            embed.add_field(name="🔄 " + f"{BOT_PREFIX}reload_all", value="Reloads all modules (cmds).", inline=False)
+            embed.add_field(name="🔄 " + f"{BOT_PREFIX}reload <module>", value="Reloads a specific module.", inline=False)
+            embed.add_field(name="📦 " + f"{BOT_PREFIX}load <module>", value="Loads a specified cog/module.", inline=False)
+            embed.add_field(name="🗑️ " + f"{BOT_PREFIX}unload <module>", value="Unloads a specified cog/module.", inline=False)
 
-            await ctx.author.send(embed=embed)  # Send the help as an embed
-            await ctx.message.delete()
+            embed.set_footer(
+                text=f"{BOT_NAME} - Beta v{BOT_VERSION} - Developed by {self.bot.get_user(OWNER_ID).name}"
+            )
+
+            try:
+                await ctx.author.send(embed=embed)  # Attempt to send as a DM
+            except discord.errors.Forbidden:
+                pass  # Handle if the bot cannot DM the member
+
+                await ctx.message.delete()  # Deletes the command message for a cleaner experience
+
+        # Only delete the command if it's in a server (not in a DM)
+            if ctx.guild:
+                try:
+                    await ctx.message.delete()  # Deletes the command message for a cleaner experience
+                except discord.errors.Forbidden:
+                    pass  # Ignore the error if the bot can't delete messages
 
     @admin_help_group.command(name='admin')
     async def help_admin(self, ctx: commands.Context):
