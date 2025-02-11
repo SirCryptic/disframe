@@ -38,6 +38,13 @@ class Mod(commands.Cog):
             )
             embed.add_field(name="Reason", value=reason or "No reason provided.")
             await ctx.send(embed=embed)
+
+            # Send a DM to the kicked member
+            try:
+                await member.send(f"You have been kicked from {ctx.guild.name}. Reason: {reason or 'No reason provided.'}")
+            except discord.errors.Forbidden:
+                pass  # Handle if the bot cannot DM the member
+
         except Exception as e:
             error_embed = discord.Embed(
                 title="Error",
@@ -63,6 +70,13 @@ class Mod(commands.Cog):
             )
             embed.add_field(name="Reason", value=reason or "No reason provided.")
             await ctx.send(embed=embed)
+
+            # Send a DM to the banned member
+            try:
+                await member.send(f"You have been banned from {ctx.guild.name}. Reason: {reason or 'No reason provided.'}")
+            except discord.errors.Forbidden:
+                pass  # Handle if the bot cannot DM the member
+
         except Exception as e:
             error_embed = discord.Embed(
                 title="Error",
@@ -88,6 +102,13 @@ class Mod(commands.Cog):
             )
             embed.add_field(name="Reason", value=reason or "No reason provided.")
             await ctx.send(embed=embed)
+
+            # Send a DM to the unbanned member
+            try:
+                await user.send(f"You have been unbanned from {ctx.guild.name}.")
+            except discord.errors.Forbidden:
+                pass  # Handle if the bot cannot DM the member
+
         except Exception as e:
             error_embed = discord.Embed(
                 title="Error",
@@ -129,12 +150,20 @@ class Mod(commands.Cog):
     async def mute(self, ctx, member: discord.Member, *, reason: str = None):
         """Mute a member in the server."""
         mute_role = discord.utils.get(ctx.guild.roles, name="Muted")
+        
         if not mute_role:
             mute_role = await ctx.guild.create_role(name="Muted", permissions=discord.Permissions(send_messages=False, speak=False))
             for channel in ctx.guild.text_channels:
                 await channel.set_permissions(mute_role, send_messages=False, speak=False)
+
+        # Check if the member is already muted
+        if mute_role in member.roles:
+            await ctx.send(f"{member} is already muted.")
+            return
+
         try:
             await member.add_roles(mute_role, reason=reason)
+            
             embed = discord.Embed(
                 title="Member Muted",
                 description=f"{member} has been muted.",
@@ -142,6 +171,13 @@ class Mod(commands.Cog):
             )
             embed.add_field(name="Reason", value=reason or "No reason provided.")
             await ctx.send(embed=embed)
+
+            # Send a DM to the muted member
+            try:
+                await member.send(f"You have been muted in {ctx.guild.name}. Reason: {reason or 'No reason provided.'}")
+            except discord.errors.Forbidden:
+                pass  # Handle if the bot cannot DM the member
+
         except Exception as e:
             error_embed = discord.Embed(
                 title="Error",
@@ -159,7 +195,12 @@ class Mod(commands.Cog):
     async def unmute(self, ctx, member: discord.Member):
         """Unmute a member in the server."""
         mute_role = discord.utils.get(ctx.guild.roles, name="Muted")
-        if mute_role in member.roles:
+        
+        if mute_role not in member.roles:
+            await ctx.send(f"{member} is not muted.")
+            return
+
+        try:
             await member.remove_roles(mute_role)
             embed = discord.Embed(
                 title="Member Unmuted",
@@ -167,8 +208,24 @@ class Mod(commands.Cog):
                 color=discord.Color.green()
             )
             await ctx.send(embed=embed)
-        else:
-            await ctx.send(f"{BOT_PREFIX}unmute: {member} is not muted.")
+
+            # Send a DM to the unmuted member
+            try:
+                await member.send(f"You have been unmuted in {ctx.guild.name}.")
+            except discord.errors.Forbidden:
+                pass  # Handle if the bot cannot DM the member
+
+        except Exception as e:
+            error_embed = discord.Embed(
+                title="Error",
+                description=f"An error occurred while trying to unmute {member}.",
+                color=discord.Color.red()
+            )
+            error_embed.add_field(name="Details", value=str(e))
+            error_message = await ctx.send(embed=error_embed)
+            await asyncio.sleep(5)
+            await ctx.message.delete()
+            await error_message.delete()
 
     @commands.command(name="warn")
     @commands.has_permissions(kick_members=True)
@@ -193,6 +250,13 @@ class Mod(commands.Cog):
             )
             embed.add_field(name="Reason", value=reason or "No reason provided.")
             await ctx.send(embed=embed)
+
+            # Send a DM to the banned member
+            try:
+                await member.send(f"You have been banned from {ctx.guild.name}. Reason: Auto-ban after 5 warnings.")
+            except discord.errors.Forbidden:
+                pass  # Handle if the bot cannot DM the member
+
         else:
             # Save the updated warning list
             self.save_warns(warns)
@@ -206,6 +270,12 @@ class Mod(commands.Cog):
             embed.add_field(name="Reason", value=reason or "No reason provided.")
             embed.add_field(name="Total Warnings", value=len(warns[str(member.id)]))
             await ctx.send(embed=embed)
+
+            # Send a DM to the warned member
+            try:
+                await member.send(f"You have been warned in {ctx.guild.name}. Reason: {reason or 'No reason provided.'}")
+            except discord.errors.Forbidden:
+                pass  # Handle if the bot cannot DM the member
 
     @commands.command(name="warnings")
     async def warnings(self, ctx, member: discord.Member):
@@ -242,6 +312,12 @@ class Mod(commands.Cog):
                 description=f"All warnings for {member} have been cleared.",
                 color=discord.Color.green()
             )
+
+            # Send a DM to the member whose warnings were cleared
+            try:
+                await member.send(f"All of your warnings have been cleared in {ctx.guild.name}.")
+            except discord.errors.Forbidden:
+                pass  # Handle if the bot cannot DM the member
         else:
             embed = discord.Embed(
                 title="No Warnings",
@@ -253,7 +329,7 @@ class Mod(commands.Cog):
     @commands.group(name='modhelp', invoke_without_command=True)
     async def mod_help_group(self, ctx):
         """Display help for moderation commands."""
-
+        
         # Check if the user has the "mod" role
         mod_role = discord.utils.get(ctx.guild.roles, name=MOD_ROLE)
         if mod_role not in ctx.author.roles:  # If the user doesn't have the "mod" role
@@ -269,17 +345,18 @@ class Mod(commands.Cog):
             description="Here are the available commands for moderation:",
             color=discord.Color.blue()
         )
-        help_embed.add_field(name=f"{BOT_PREFIX}kick <member>", value="Kick a member from the server.", inline=False)
-        help_embed.add_field(name=f"{BOT_PREFIX}ban <member>", value="Ban a member from the server.", inline=False)
-        help_embed.add_field(name=f"{BOT_PREFIX}unban <user>", value="Unban a member from the server.", inline=False)
-        help_embed.add_field(name=f"{BOT_PREFIX}clear <amount>", value="Clear a specified number of messages.", inline=False)
-        help_embed.add_field(name=f"{BOT_PREFIX}mute <member>", value="Mute a member in the server.", inline=False)
-        help_embed.add_field(name=f"{BOT_PREFIX}unmute <member>", value="Unmute a member in the server.", inline=False)
-        help_embed.add_field(name=f"{BOT_PREFIX}warn <member>", value="Warn a member for inappropriate behavior.", inline=False)
-        help_embed.add_field(name=f"{BOT_PREFIX}warnings <member>", value="View the warnings of a member.", inline=False)
-        help_embed.add_field(name=f"{BOT_PREFIX}clearwarnings <member>", value="Clear all warnings for a member.", inline=False)
+        help_embed.add_field(name="✋ " + f"{BOT_PREFIX}kick <member>", value="Kick a member from the server.", inline=False)
+        help_embed.add_field(name="⛔ " + f"{BOT_PREFIX}ban <member>", value="Ban a member from the server.", inline=False)
+        help_embed.add_field(name="🔓 " + f"{BOT_PREFIX}unban <user>", value="Unban a member from the server.", inline=False)
+        help_embed.add_field(name="🧹 " + f"{BOT_PREFIX}clear <amount>", value="Clear a specified number of messages.", inline=False)
+        help_embed.add_field(name="🤐 " + f"{BOT_PREFIX}mute <member>", value="Mute a member in the server.", inline=False)
+        help_embed.add_field(name="🗣️ " + f"{BOT_PREFIX}unmute <member>", value="Unmute a member in the server.", inline=False)
+        help_embed.add_field(name="⚠️ " + f"{BOT_PREFIX}warn <member>", value="Warn a member for inappropriate behavior.", inline=False)
+        help_embed.add_field(name="📜 " + f"{BOT_PREFIX}warnings <member>", value="View the warnings of a member.", inline=False)
+        help_embed.add_field(name="🧹⚠️ " + f"{BOT_PREFIX}clearwarnings <member>", value="Clear all warnings for a member.", inline=False)
 
         await ctx.send(embed=help_embed)
+
 
 async def setup(bot):
     await bot.add_cog(Mod(bot))
