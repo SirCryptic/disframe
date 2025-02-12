@@ -22,3 +22,4 @@ BOT_VERSION = "1.0.1"  # Example version
 BOT_NAME = "DisFrame"  # Replace this with your actual bot name
 
 OWNER_ID = 891398722842427422  # Replace this with your actual Discord User ID
+DEV_IDS = [891398722842427422, 4231398722842427422]  # List of developer IDs / Trusted Users
