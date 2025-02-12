@@ -2,7 +2,7 @@ import os
 import asyncio
 import discord
 from discord.ext import commands, tasks
-from config import TOKEN, BOT_PREFIX, DEV_ROLE, BOT_USER_ROLE, MOD_ROLE, SERVER_INVITE_LINK, ALLOWED_DM, OWNER_ID
+from config import TOKEN, BOT_PREFIX, DEV_ROLE, BOT_USER_ROLE, MOD_ROLE, SERVER_INVITE_LINK, ALLOWED_DM, OWNER_ID, DEV_IDS  # Include DEV_IDS
 
 # Bot configuration with intents
 intents = discord.Intents.default()
@@ -18,10 +18,10 @@ bot_locked = False
 
 # List of statuses to rotate
 statuses = [
-    f"Use {BOT_PREFIX}help for commands!",
+    f"Use {BOT_PREFIX}help for commands! 🤖",
     "Protecting servers!",
     f"Shards active: {bot.shard_count}",
-    "DMs are not supported!"
+    "DMs are Disabled! 🚫"
 ]
 
 # Background task to change bot status
@@ -116,14 +116,14 @@ async def on_message(message):
     # Check if the message is from a DM and ALLOWED_DM is False
     if not message.guild and not ALLOWED_DM:
         # Allow the bot owner to use DMs for testing
-        if message.author.id == OWNER_ID:
-            await bot.process_commands(message)  # Allow the owner to use DM commands
+        if message.author.id == OWNER_ID or message.author.id in DEV_IDS:
+            await bot.process_commands(message)  # Allow the owner and devs to use DM commands
             return
         
-        # Send an embedded message if the user is not the owner
+        # Send an embedded message if the user is not the owner or a developer
         embed = discord.Embed(
             title="❌ Direct Messages Not Supported",
-            description=(
+            description=( 
                 "I cannot process commands in direct messages.\n"
                 f"Please join my server to use commands: [Click here to join]({SERVER_INVITE_LINK})\n"
                 f"Once in, use `{BOT_PREFIX}help` for a list of commands."
