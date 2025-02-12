@@ -11,18 +11,19 @@ import discord
 import os
 import copy
 
-from config import OWNER_ID, BOT_PREFIX, BOT_NAME, BOT_VERSION
+from config import OWNER_ID, DEV_IDS, BOT_PREFIX, BOT_NAME, BOT_VERSION
 
 class Admin(commands.Cog):
     """Admin-only commands for managing bot functionality."""
 
     def __init__(self, bot):
         self.bot = bot
-        self.allowed_user_id = OWNER_ID
+        # Combine OWNER_ID and DEV_IDS into one list for checking allowed users
+        self.allowed_user_ids = [OWNER_ID] + DEV_IDS
 
     async def cog_check(self, ctx: commands.Context) -> bool:
         """Check if the user is the allowed user (by user ID)."""
-        return ctx.author.id == self.allowed_user_id
+        return ctx.author.id in self.allowed_user_ids
 
     async def run_process(self, command: str) -> list[str]:
         """Runs a shell command asynchronously and returns output."""
@@ -109,7 +110,7 @@ class Admin(commands.Cog):
     @commands.command(hidden=True)
     async def restart(self, ctx: commands.Context):
         """Restarts the bot."""
-        if ctx.author.id == self.allowed_user_id:  # Only allow the allowed user to restart the bot
+        if ctx.author.id in self.allowed_user_ids:  # Check if the user is in the allowed list
             await ctx.send(f"{BOT_PREFIX}restart: Restarting the bot...")
             await self.bot.close()  # Close the bot (this will stop it)
             os.execv(sys.executable, ['python'] + sys.argv)  # Restart the bot by running the same command used to start it
@@ -117,7 +118,7 @@ class Admin(commands.Cog):
     @commands.command(hidden=True)
     async def reload_all(self, ctx: commands.Context):
         """Reload all modules."""
-        if ctx.author.id == self.allowed_user_id:  # Only allow the allowed user to reload all modules
+        if ctx.author.id in self.allowed_user_ids:  # Check if the user is in the allowed list
             for filename in os.listdir('./cmds'):
                 if filename.endswith('.py'):
                     module = f'cmds.{filename[:-3]}'
@@ -139,10 +140,10 @@ class Admin(commands.Cog):
     @commands.group(name='adminhelp', invoke_without_command=True)
     async def admin_help_group(self, ctx: commands.Context):
          """Base help command for displaying available admin commands."""
-         if ctx.author.id == self.allowed_user_id:  # Only the owner can access the help group
+         if ctx.author.id in self.allowed_user_ids:  # Check if the user is in the allowed list
             embed = discord.Embed(
             title="Admin Commands Help",
-            description="List of available admin commands. These are available only to the bot owner.",
+            description="List of available admin commands. These are available only to the bot owner and developers.",
             color=discord.Color.green()
             )
             embed.add_field(name="🧑‍💻 " + f"{BOT_PREFIX}eval <code>", value="Executes Python code (useful for testing code snippets).", inline=False)
@@ -175,7 +176,7 @@ class Admin(commands.Cog):
     @admin_help_group.command(name='admin')
     async def help_admin(self, ctx: commands.Context):
         """Help message for the admin commands."""
-        if ctx.author.id == self.allowed_user_id:  # Only the owner can use this
+        if ctx.author.id in self.allowed_user_ids:  # Check if the user is in the allowed list
             await self.admin_help_group(ctx)
 
 async def setup(bot):
