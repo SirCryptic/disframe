@@ -13,10 +13,10 @@ class Help(commands.Cog):
         """Display the help menu with organized sections and buttons for pagination."""
         
         # Get the bot owner's profile dynamically
-        owner = await self.bot.fetch_user(config.OWNER_ID)  # Fetch user based on the stored ID
+        owner = await self.bot.fetch_user(config.OWNER_ID)
         footer_text = f"{config.BOT_NAME} - Beta v{config.BOT_VERSION} - developed by {owner.name}"
 
-        # Define general help page (always visible)
+        # General Help Page (Always Visible)
         general_embed = discord.Embed(
             title="Help Menu - General Commands",
             description="The following commands are available for everyone:",
@@ -25,34 +25,12 @@ class Help(commands.Cog):
         general_embed.add_field(name=f"```{config.BOT_PREFIX}example```", value="An example command.", inline=False)
         general_embed.add_field(name=f"```{config.BOT_PREFIX}info```", value="Displays Information About The Bot.", inline=False)
         general_embed.add_field(name=f"```{config.BOT_PREFIX}serverinfo```", value="Displays Information About The Server.", inline=False)
-        general_embed.add_field(name=f"```{config.BOT_PREFIX}profile <@/ID>```", value="Fetch OSINT profile information of a Discord user.", inline=False)
         general_embed.set_footer(text=footer_text)
 
-        # If in DMs and the user is NOT the owner, only show the general help page
-        if isinstance(ctx.channel, discord.DMChannel) and ctx.author.id != config.OWNER_ID:
-            await ctx.send(embed=general_embed)
-            return
-
-        # Initialize list of help pages with general commands
-        help_pages = [general_embed]
-
-        # Check if this is in a server (so we can check roles)
-        if not isinstance(ctx.channel, discord.DMChannel):
-            user_roles = [role.name.lower() for role in ctx.author.roles]  # Convert to lowercase for consistency
-
-            # Check if user has the mod role
-            if config.MOD_ROLE.lower() in user_roles or ctx.author.guild_permissions.manage_messages:
-                mod_embed = discord.Embed(
-                    title="Help Menu - Mod Commands",
-                    description="The following commands are available for moderators:",
-                    color=discord.Color.blue(),
-                )
-                mod_embed.add_field(name=f"```{config.BOT_PREFIX}modhelp```", value="To List Available Moderation Commands. [Mod Only]", inline=False)
-                mod_embed.set_footer(text=footer_text)
-                help_pages.append(mod_embed)
-
-            # Check if user has the dev role OR is the bot owner
-            if config.DEV_ROLE.lower() in user_roles or ctx.author.id == config.OWNER_ID:
+        # If in DMs
+        if isinstance(ctx.channel, discord.DMChannel):
+            if ctx.author.id == config.OWNER_ID or ctx.author.id in config.DEV_IDS:
+                # Dev Page (Accessible to DEV_IDS and OWNER_ID only)
                 dev_embed = discord.Embed(
                     title="Help Menu - Dev Commands",
                     description="The following commands are available for developers only:",
@@ -60,12 +38,36 @@ class Help(commands.Cog):
                 )
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}lock```", value="Lock the bot to dev users only.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}unlock```", value="Unlock the bot to all users.", inline=False)
-                dev_embed.add_field(name=f"```{config.BOT_PREFIX}adminhelp```", value="To List Full Available Commands [Owner Only].", inline=False)
+                dev_embed.add_field(name=f"```{config.BOT_PREFIX}adminhelp```", value="List full available commands. [Owner Only]", inline=False)
                 dev_embed.set_footer(text=footer_text)
-                help_pages.append(dev_embed)
 
-        # If the user is the bot owner, show the Dev commands even in DMs
-        if ctx.author.id == config.OWNER_ID:
+                help_pages = [general_embed, dev_embed]
+            else:
+                # Non-dev users in DMs only see the general page
+                help_pages = [general_embed]
+            
+            # Send help menu with pagination
+            view = HelpView(help_pages)
+            await view.send(ctx)
+            return
+
+        # If in a Guild
+        help_pages = [general_embed]
+        user_roles = [role.name.lower() for role in ctx.author.roles]
+
+        # Mod Page (Accessible to MOD_ROLE, OWNER_ID, or DEV_IDS)
+        if config.MOD_ROLE.lower() in user_roles or ctx.author.guild_permissions.manage_messages or ctx.author.id == config.OWNER_ID or ctx.author.id in config.DEV_IDS:
+            mod_embed = discord.Embed(
+                title="Help Menu - Mod Commands",
+                description="The following commands are available for moderators:",
+                color=discord.Color.blue(),
+            )
+            mod_embed.add_field(name=f"```{config.BOT_PREFIX}modhelp```", value="Lists available moderation commands. [Mod Only]", inline=False)
+            mod_embed.set_footer(text=footer_text)
+            help_pages.append(mod_embed)
+
+        # Dev Page (Accessible to DEV_IDS and OWNER_ID only)
+        if ctx.author.id == config.OWNER_ID or ctx.author.id in config.DEV_IDS:
             dev_embed = discord.Embed(
                 title="Help Menu - Dev Commands",
                 description="The following commands are available for developers only:",
@@ -73,13 +75,13 @@ class Help(commands.Cog):
             )
             dev_embed.add_field(name=f"```{config.BOT_PREFIX}lock```", value="Lock the bot to dev users only.", inline=False)
             dev_embed.add_field(name=f"```{config.BOT_PREFIX}unlock```", value="Unlock the bot to all users.", inline=False)
-            dev_embed.add_field(name=f"```{config.BOT_PREFIX}adminhelp```", value="To List Full Available Commands [Owner Only].", inline=False)
+            dev_embed.add_field(name=f"```{config.BOT_PREFIX}adminhelp```", value="List full available commands. [Owner Only]", inline=False)
             dev_embed.set_footer(text=footer_text)
             help_pages.append(dev_embed)
 
-        # Send the first help page using HelpView
+        # Send help menu with pagination
         view = HelpView(help_pages)
-        await view.send(ctx)  # Send message and store it in HelpView
+        await view.send(ctx)
 
 class HelpView(discord.ui.View):
     """View to handle button interactions for pagination."""
@@ -91,7 +93,7 @@ class HelpView(discord.ui.View):
         self.message = None  # Store the message reference
 
     async def send(self, ctx):
-        """Send the message and store it for future edits."""
+        """Send the message and store it for pagination."""
         self.message = await ctx.send(embed=self.embeds[0], view=self)
 
     @discord.ui.button(label="◀️ Back", style=discord.ButtonStyle.secondary, disabled=True)
