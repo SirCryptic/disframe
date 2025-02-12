@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+import config
 
 class ServerInfo(commands.Cog):
     """Server information commands."""
@@ -75,11 +76,15 @@ class ServerInfo(commands.Cog):
             embed.add_field(name="Humans", value=str(len([m for m in members if not m.bot])), inline=True)
             embed.add_field(name="Bots", value=str(len([m for m in members if m.bot])), inline=True)
 
+            embed.add_field(name="Server Created On", value=str(guild.created_at.strftime('%d.%m.%Y')), inline=True)
+
             # Verification Level
             embed.add_field(name="Server Verification Level", value=str(guild.verification_level), inline=True)
 
-            # Footer with Server Creation Date
-            embed.set_footer(text=f"Server Created On • {guild.created_at.strftime('%d.%m.%Y')}")
+            embed.set_footer(
+                text=f"{config.BOT_NAME} - Beta v{config.BOT_VERSION} - developed by {self.bot.get_user(config.OWNER_ID).name}",
+                icon_url=self.bot.user.avatar.url
+            )
 
             # Server Icon (with fallback for servers without an icon)
             if guild.icon:
