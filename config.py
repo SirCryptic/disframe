@@ -10,6 +10,7 @@ BOT_PREFIX = "-"
 DEV_ROLE = "dev"
 BOT_USER_ROLE = "bot user"
 MOD_ROLE = "mod"
+SUBSCRIPTION_ROLE = "Subscription"
 
 # Server link (change this to your own server's invite link)
 SERVER_INVITE_LINK = "https://discord.gg/invite"

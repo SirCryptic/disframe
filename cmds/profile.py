@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import urllib.parse
+import config
 
 class ProfileCog(commands.Cog):
     """Cog for managing user profile-related commands."""
@@ -57,7 +58,10 @@ class ProfileCog(commands.Cog):
             embed.add_field(name="Reddit Profile", value=f"[Visit Reddit]({reddit_url})", inline=False)
             embed.add_field(name="GitHub Profile", value=f"[Visit GitHub]({github_url})", inline=False)
 
-            embed.set_footer(text="OSINT powered by Open Sources")
+            embed.set_footer(
+                text=f"{config.BOT_NAME} - Beta v{config.BOT_VERSION} - developed by {self.bot.get_user(config.OWNER_ID).name}",
+                icon_url=self.bot.user.avatar.url
+            )
 
             # Send the profile embed
             await ctx.send(embed=embed)
@@ -97,7 +101,10 @@ class ProfileCog(commands.Cog):
                 embed.add_field(name="Reddit Profile", value=f"[Visit Reddit]({reddit_url})", inline=False)
                 embed.add_field(name="GitHub Profile", value=f"[Visit GitHub]({github_url})", inline=False)
 
-                embed.set_footer(text="OSINT powered by Open Sources")
+                embed.set_footer(
+                text=f"{config.BOT_NAME} - Beta v{config.BOT_VERSION} - Developed by {self.bot.get_user(config.OWNER_ID).name}",
+                icon_url=self.bot.user.avatar.url
+            )
 
                 # Send the embed
                 await ctx.send(embed=embed)

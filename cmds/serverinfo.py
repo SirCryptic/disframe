@@ -82,7 +82,7 @@ class ServerInfo(commands.Cog):
             embed.add_field(name="Server Verification Level", value=str(guild.verification_level), inline=True)
 
             embed.set_footer(
-                text=f"{config.BOT_NAME} - Beta v{config.BOT_VERSION} - developed by {self.bot.get_user(config.OWNER_ID).name}",
+                text=f"{config.BOT_NAME} - Beta v{config.BOT_VERSION} - Developed by {self.bot.get_user(config.OWNER_ID).name}",
                 icon_url=self.bot.user.avatar.url
             )
 

@@ -9,6 +9,8 @@ A modular and extensible Discord bot framework that allows easy customization by
 - **Help System with Pagination**: A clean and organized help command with interactive buttons for navigation.
 - **Developer & Mod Commands**: Exclusive commands for bot admins and moderators.
 - **DM Restrictions**: Commands are primarily executed in servers, ensuring the bot functions securely within guilds.
+- **Dynamic Command Management**: Load, unload, and reload commands without restarting the bot.
+- **Subscription Management**: Manage subscription roles and private channels for subscribers.
 
 ## Requirements
 
@@ -21,9 +23,10 @@ A modular and extensible Discord bot framework that allows easy customization by
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/discord-bot.git
-cd discord-bot
+git clone https://github.com/sircryptic/disframe.git
+cd disframe
 ```
+
 ### 2. Install dependencies
 It’s recommended to use a virtual environment to manage dependencies.
 
@@ -34,30 +37,27 @@ pip install -r requirements.txt
 ```
 
 ### 3. Set up your bot token
-Create a config.py file in the root directory and add your Discord bot token(you will also find a example with everything you need in the repo.):
+Change the `config.py` file in the root directory and add your Discord bot token etc:
 
-```python
-# config.py
-TOKEN = "YOUR_BOT_TOKEN"
-```
-Replace "YOUR_BOT_TOKEN" with your actual Discord bot token.
+Replace the placeholders with your actual values.
 
 ### 4. Run the bot
 Once everything is set up, run the bot using:
 
 ```bash
-python bot.py
+python3 bot.py
 ```
 The bot will log in and start processing commands.
 
-# Adding Commands
+## Adding Commands
 To add new commands, simply follow these steps:
 
-Create a Python file in the cmds folder (e.g., `new_command.py`).
-Define a class inheriting from `commands.Cog` and add the new commands inside that class.
-Use the `@commands.command()` decorator to define the command.
-Implement any logic or checks for role-based permissions.
-Example of where i would place my custom command (`cmds/new_command.py`):
+1. Create a Python file in the `cmds` folder (e.g., `new_command.py`).
+2. Define a class inheriting from `commands.Cog` and add the new commands inside that class.
+3. Use the `@commands.command()` decorator to define the command.
+4. Implement any logic or checks for role-based permissions.
+
+Example of a custom command (`cmds/new_command.py`):
 
 ```python
 import discord
@@ -75,31 +75,32 @@ class NewCommand(commands.Cog):
 async def setup(bot):
     await bot.add_cog(NewCommand(bot))
 ```
+
 ### Loading and Managing Commands  
 
 DisFrame automatically loads any new commands placed in the `cmds` folder when it starts. Simply add a new file, restart the bot, and it’s ready to use!  
 
 Additionally, you can now **dynamically load, unload, and reload modules** without restarting the bot.  
 
-####  Load a New Command Manually  
+#### Load a New Command Manually  
 ```bash
 -load cmds.new_command
 ```
-This will load cmds/new_command.py dynamically.
+This will load `cmds/new_command.py` dynamically.
 
- Unload a Command
+#### Unload a Command
 ```bash
 -unload cmds.new_command
 ```
 This removes the command from memory until it’s loaded again.
 
- Reload all Commands in cmds folder execpt mod & dev or any folder
-```
+#### Reload all Commands in `cmds` folder except `mod` & `dev` or any folder
+```bash
 -reload_all
 ```
 
- Reload a command
-```
+#### Reload a command
+```bash
 -reload
 ```
 
@@ -109,8 +110,8 @@ This removes the command from memory until it’s loaded again.
 - **Access**: The owner can DM the bot directly for any queries or requests, including management tasks eg reloading cmds.
 - **Important**: To set the owner of the bot, you need to update the `OWNER_ID` in the `config.py` file.
   - **How to set**: Open your `config.py` file and locate the `OWNER_ID` variable. Set this value to the Discord User ID of the bot owner.
-```
-  OWNER_ID = your_discord_user_id_here
+```python
+OWNER_ID = your_discord_user_id_here
 ```
 
 ### **dev**
@@ -130,22 +131,22 @@ This removes the command from memory until it’s loaded again.
 - **Access**: This role has the most limited access, with only basic commands allowed.
 - **Usage**: This role is assigned to every server member who should not have special privileges or advanced access.
 
-### Contributing
+### **subscriber**
+- **Access**: Subscribers have access to exclusive channels and can use DMs even if they are disabled globally.
+- **Usage**: This role is assigned to users who have subscribed to the bot's services.
+
+## Contributing
 If you'd like to contribute to this bot, feel free to fork the repository and submit a pull request. Here are some ways you can contribute:
 
-Add new commands to the bot.
+- Add new commands to the bot.
+- Improve the error handling and messages.
+- Fix bugs or improve code efficiency.
+- Suggest new features.
 
-Improve the error handling and messages.
-
-Fix bugs or improve code efficiency.
-
-Suggest new features.
-
-### License
+## License
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-### Support
+## Support
 If you encounter any issues or need help, feel free to open an issue on this repository.
 
 Feel free to update the `README.md` with your project-specific details, such as the specific information regarding the bot's functionality.
-

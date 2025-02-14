@@ -71,8 +71,11 @@ class Info(commands.Cog):
             avatar_url = self.bot.user.avatar.url if self.bot.user.avatar else self.bot.user.default_avatar.url
             embed.set_thumbnail(url=avatar_url)
 
-            # Add footer with requester's information
-            embed.set_footer(text=f"{BOT_NAME} - Beta v{BOT_VERSION} - developed by {owner.name}")
+            # Add footer
+            embed.set_footer(
+                text=f"{config.BOT_NAME} - Beta v{config.BOT_VERSION} - developed by {self.bot.get_user(config.OWNER_ID).name}",
+                icon_url=self.bot.user.avatar.url
+            )
 
             # Send the embed
             await ctx.send(embed=embed)

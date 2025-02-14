@@ -1,8 +1,10 @@
 import os
 import asyncio
 import discord
+import json
 from discord.ext import commands, tasks
-from config import TOKEN, BOT_PREFIX, DEV_ROLE, BOT_USER_ROLE, MOD_ROLE, SERVER_INVITE_LINK, ALLOWED_DM, OWNER_ID, DEV_IDS  # Include DEV_IDS
+import config
+from config import TOKEN, BOT_PREFIX, DEV_ROLE, BOT_USER_ROLE, MOD_ROLE, SERVER_INVITE_LINK, ALLOWED_DM, OWNER_ID, DEV_IDS, SUBSCRIPTION_ROLE
 
 # Bot configuration with intents
 intents = discord.Intents.default()
@@ -15,6 +17,27 @@ bot = commands.AutoShardedBot(command_prefix=BOT_PREFIX, intents=intents)
 
 # Global bot lock variable
 bot_locked = False
+
+# Load subscription IDs from config.json
+SUBSCRIPTION_IDS = []
+
+# Load subscription IDs from a JSON file
+def load_subscription_ids():
+    """Load subscription IDs from config.json."""
+    global SUBSCRIPTION_IDS
+    if os.path.exists("config.json"):
+        with open("config.json", "r") as f:
+            data = json.load(f)
+            SUBSCRIPTION_IDS = data.get("SUBSCRIPTION_IDS", [])
+    else:
+        SUBSCRIPTION_IDS = []
+
+# Save subscription IDs to a JSON file
+def save_subscription_ids():
+    """Save subscription IDs to config.json."""
+    data = {"SUBSCRIPTION_IDS": SUBSCRIPTION_IDS}
+    with open("config.json", "w") as f:
+        json.dump(data, f, indent=4)
 
 # List of statuses to rotate
 statuses = [
@@ -33,13 +56,33 @@ async def change_status():
 
 async def ensure_roles_exist(guild):
     """Ensure required roles exist in the guild."""
-    required_roles = [DEV_ROLE, BOT_USER_ROLE, MOD_ROLE]
+    required_roles = [DEV_ROLE, BOT_USER_ROLE, MOD_ROLE, SUBSCRIPTION_ROLE]
     existing_roles = {role.name for role in guild.roles}
 
     for role_name in required_roles:
         if role_name not in existing_roles:
             await guild.create_role(name=role_name)
             print(f"[INFO] Created role: {role_name}")
+
+# Function to create subscription channel with emoji
+async def create_subscription_channel(guild):
+    """Create a private subscription channel if it doesn't exist."""
+    existing_channel = discord.utils.get(guild.text_channels, name="subscriptions")
+    
+    if not existing_channel:
+        # Create the 'subscriptions' private text channel with an emoji in the name
+        emoji = "🔒"  # Example emoji for private channels
+        channel_name = f"{emoji}-subscriptions"
+        
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(read_messages=False),  # Deny access to @everyone
+            discord.utils.get(guild.roles, name=SUBSCRIPTION_ROLE): discord.PermissionOverwrite(read_messages=True),  # Allow access to subscribers
+        }
+        
+        channel = await guild.create_text_channel(channel_name, overwrites=overwrites)
+        print(f"[INFO] Created private 'subscriptions' channel with emoji in {guild.name}")
+        return channel
+    return existing_channel
 
 async def load_commands():
     """Recursively load command files from cmds/ and its subdirectories."""
@@ -61,10 +104,14 @@ async def on_ready():
 
     for guild in bot.guilds:
         await ensure_roles_exist(guild)
+        await create_subscription_channel(guild)  # Ensure the subscription channel exists
 
     bot.remove_command("help")
     print("Loading commands...")
     await load_commands()
+
+    # Load subscription data
+    load_subscription_ids()
     
     print("[INFO] Bot is ready!")
     change_status.start()
@@ -115,12 +162,12 @@ async def on_message(message):
 
     # Check if the message is from a DM and ALLOWED_DM is False
     if not message.guild and not ALLOWED_DM:
-        # Allow the bot owner to use DMs for testing
-        if message.author.id == OWNER_ID or message.author.id in DEV_IDS:
-            await bot.process_commands(message)  # Allow the owner and devs to use DM commands
+        # Allow the bot owner, devs, or users in SUBSCRIPTION_IDS to bypass DM restrictions
+        if message.author.id == OWNER_ID or message.author.id in DEV_IDS or message.author.id in SUBSCRIPTION_IDS:
+            await bot.process_commands(message)  # Allow owner, devs, or subscription users to use DM commands
             return
         
-        # Send an embedded message if the user is not the owner or a developer
+        # Send an embedded message if the user is not allowed to DM
         embed = discord.Embed(
             title="❌ Direct Messages Not Supported",
             description=( 
@@ -216,5 +263,165 @@ async def on_command_error(ctx, error):
 
     print(f"[ERROR] Command error: {error}")
 
-if __name__ == "__main__":
-    bot.run(TOKEN)
+# Subscription Role Management Commands
+@bot.command(name="add_subscription")
+@commands.has_role(DEV_ROLE)
+async def add_subscription(ctx, user_id: int = None):
+    """Add a user ID to the Subscription role and assign the role to the user in the guild."""
+    if user_id is None:
+        # Send help message if no user ID is provided
+        embed = discord.Embed(
+            title="How to Use add_subscription",
+            description=f"Usage: `{BOT_PREFIX}add_subscription <user_id>`\n"
+                        "Adds a user to the subscription role.\n"
+                        f"Example: `{BOT_PREFIX}add_subscription 1234567890`",
+            color=discord.Color.blue(),
+        )
+        await ctx.send(embed=embed)
+        return
+
+    if user_id not in SUBSCRIPTION_IDS:
+        SUBSCRIPTION_IDS.append(user_id)
+        save_subscription_ids()
+
+        # Now assign the role to the user in the same guild
+        assigned = False
+        for guild in bot.guilds:
+            # Look for the user in the guild
+            member = guild.get_member(user_id)
+            if member:
+                # Check if the role exists
+                role = discord.utils.get(guild.roles, name=SUBSCRIPTION_ROLE)
+                if role:
+                    try:
+                        # Assign the role
+                        await member.add_roles(role)
+                        assigned = True
+                        
+                        # Create the subscription channel if it doesn't exist
+                        await create_subscription_channel(guild)
+                        
+                        break
+                    except discord.Forbidden:
+                        # If the bot doesn't have permissions
+                        embed = discord.Embed(
+                            title="Permission Error",
+                            description=f"The bot doesn't have the required permissions to assign roles in {guild.name}. Please ensure the bot has the 'Manage Roles' permission and its role is above {role.name}.",
+                            color=discord.Color.red(),
+                        )
+                        await ctx.send(embed=embed)
+                        return
+
+        if assigned:
+            embed = discord.Embed(
+                title="Subscription Updated",
+                description=f"User ID {user_id} has been added to the subscription list and given the `{SUBSCRIPTION_ROLE}` role.",
+                color=discord.Color.green(),
+            )
+        else:
+            embed = discord.Embed(
+                title="Subscription Updated",
+                description=f"User ID {user_id} has been added to the subscription list, but they are not in any of the connected guilds.",
+                color=discord.Color.orange(),
+            )
+
+        await ctx.send(embed=embed)
+
+    else:
+        embed = discord.Embed(
+            title="Subscription Error",
+            description=f"User ID {user_id} is already in the subscription list.",
+            color=discord.Color.red(),
+        )
+        await ctx.send(embed=embed)
+
+@bot.command(name="remove_subscription")
+@commands.has_role(DEV_ROLE)
+async def remove_subscription(ctx, user_id: int = None):
+    """Remove a user ID from the Subscription role and remove the role from the user in the guild."""
+    if user_id is None:
+        # Send help message if no user ID is provided
+        embed = discord.Embed(
+            title="How to Use remove_subscription",
+            description=f"Usage: `{BOT_PREFIX}remove_subscription <user_id>`\n"
+                        "Removes a user from the subscription role.\n"
+                        f"Example: `{BOT_PREFIX}remove_subscription 1234567890`",
+            color=discord.Color.blue(),
+        )
+        await ctx.send(embed=embed)
+        return
+
+    if user_id in SUBSCRIPTION_IDS:
+        SUBSCRIPTION_IDS.remove(user_id)
+        save_subscription_ids()
+
+        # Remove the role from the user in the same guild
+        removed = False
+        for guild in bot.guilds:
+            # Look for the user in the guild
+            member = guild.get_member(user_id)
+            if member:
+                # Check if the role exists
+                role = discord.utils.get(guild.roles, name=SUBSCRIPTION_ROLE)
+                if role:
+                    try:
+                        # Remove the role
+                        await member.remove_roles(role)
+                        removed = True
+                        break
+                    except discord.Forbidden:
+                        # If the bot doesn't have permissions
+                        embed = discord.Embed(
+                            title="Permission Error",
+                            description=f"The bot doesn't have the required permissions to remove roles in {guild.name}. Please ensure the bot has the 'Manage Roles' permission and its role is above {role.name}.",
+                            color=discord.Color.red(),
+                        )
+                        await ctx.send(embed=embed)
+                        return
+
+        if removed:
+            embed = discord.Embed(
+                title="Subscription Updated",
+                description=f"User ID {user_id} has been removed from the subscription list and their `{SUBSCRIPTION_ROLE}` role has been removed.",
+                color=discord.Color.green(),
+            )
+        else:
+            embed = discord.Embed(
+                title="Subscription Updated",
+                description=f"User ID {user_id} has been removed from the subscription list, but they are not in any of the connected guilds.",
+                color=discord.Color.orange(),
+            )
+
+        await ctx.send(embed=embed)
+
+    else:
+        embed = discord.Embed(
+            title="Subscription Error",
+            description=f"User ID {user_id} is not in the subscription list.",
+            color=discord.Color.red(),
+        )
+        await ctx.send(embed=embed)
+
+@bot.command(name="check_subscription")
+async def check_subscription(ctx, user_id: int = None):
+    """Check if a user is in the subscription list."""
+    if user_id is None:
+        user_id = ctx.author.id  # Default to checking the author's subscription status
+
+    if user_id in SUBSCRIPTION_IDS:
+        embed = discord.Embed(
+            title="Subscription Status",
+            description=f"User ID {user_id} is **subscribed**.",
+            color=discord.Color.green(),
+        )
+    else:
+        embed = discord.Embed(
+            title="Subscription Status",
+            description=f"User ID {user_id} is **not subscribed**.",
+            color=discord.Color.red(),
+        )
+    
+    await ctx.send(embed=embed)
+
+# Run the bot
+bot.run(TOKEN)

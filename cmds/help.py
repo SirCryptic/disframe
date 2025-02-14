@@ -14,7 +14,7 @@ class Help(commands.Cog):
         
         # Get the bot owner's profile dynamically
         owner = await self.bot.fetch_user(config.OWNER_ID)
-        footer_text = f"{config.BOT_NAME} - Beta v{config.BOT_VERSION} - developed by {owner.name}"
+        footer_text = f"{config.BOT_NAME} - Beta v{config.BOT_VERSION} - Developed by {owner.name}"
 
         # General Help Page (Always Visible)
         general_embed = discord.Embed(
@@ -25,8 +25,9 @@ class Help(commands.Cog):
         general_embed.add_field(name=f"```{config.BOT_PREFIX}example```", value="An example command.", inline=False)
         general_embed.add_field(name=f"```{config.BOT_PREFIX}info```", value="Displays Information About The Bot.", inline=False)
         general_embed.add_field(name=f"```{config.BOT_PREFIX}serverinfo```", value="Displays Information About The Server.", inline=False)
-        general_embed.set_footer(text=footer_text)
-
+        general_embed.set_footer(text=footer_text,
+             icon_url=self.bot.user.avatar.url
+        )
         # If in DMs
         if isinstance(ctx.channel, discord.DMChannel):
             if ctx.author.id == config.OWNER_ID or ctx.author.id in config.DEV_IDS:
@@ -39,7 +40,9 @@ class Help(commands.Cog):
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}lock```", value="Lock the bot to dev users only.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}unlock```", value="Unlock the bot to all users.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}adminhelp```", value="List full available commands. [Owner Only]", inline=False)
-                dev_embed.set_footer(text=footer_text)
+                dev_embed.set_footer(text=footer_text,
+             icon_url=self.bot.user.avatar.url
+        )
 
                 help_pages = [general_embed, dev_embed]
             else:
@@ -63,7 +66,9 @@ class Help(commands.Cog):
                 color=discord.Color.blue(),
             )
             mod_embed.add_field(name=f"```{config.BOT_PREFIX}modhelp```", value="Lists available moderation commands. [Mod Only]", inline=False)
-            mod_embed.set_footer(text=footer_text)
+            mod_embed.set_footer(text=footer_text,
+             icon_url=self.bot.user.avatar.url
+        )
             help_pages.append(mod_embed)
 
         # Dev Page (Accessible to DEV_IDS and OWNER_ID only)
@@ -76,7 +81,9 @@ class Help(commands.Cog):
             dev_embed.add_field(name=f"```{config.BOT_PREFIX}lock```", value="Lock the bot to dev users only.", inline=False)
             dev_embed.add_field(name=f"```{config.BOT_PREFIX}unlock```", value="Unlock the bot to all users.", inline=False)
             dev_embed.add_field(name=f"```{config.BOT_PREFIX}adminhelp```", value="List full available commands. [Owner Only]", inline=False)
-            dev_embed.set_footer(text=footer_text)
+            dev_embed.set_footer(text=footer_text,
+             icon_url=self.bot.user.avatar.url
+        )
             help_pages.append(dev_embed)
 
         # Send help menu with pagination
