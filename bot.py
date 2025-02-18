@@ -67,7 +67,7 @@ async def ensure_roles_exist(guild):
 # Function to create subscription channel with emoji
 async def create_subscription_channel(guild):
     """Create a private subscription channel if it doesn't exist."""
-    existing_channel = discord.utils.get(guild.text_channels, name="subscriptions")
+    existing_channel = discord.utils.get(guild.text_channels, name="🔒-subscriptions")
     
     if not existing_channel:
         # Create the 'subscriptions' private text channel with an emoji in the name
@@ -264,8 +264,9 @@ async def on_command_error(ctx, error):
     print(f"[ERROR] Command error: {error}")
 
 # Subscription Role Management Commands
+# Subscription Role Management Commands
 @bot.command(name="add_subscription")
-@commands.has_role(DEV_ROLE)
+@commands.check(lambda ctx: ctx.author.id == OWNER_ID or ctx.author.id in DEV_IDS)
 async def add_subscription(ctx, user_id: int = None):
     """Add a user ID to the Subscription role and assign the role to the user in the guild."""
     if user_id is None:
@@ -336,7 +337,7 @@ async def add_subscription(ctx, user_id: int = None):
         await ctx.send(embed=embed)
 
 @bot.command(name="remove_subscription")
-@commands.has_role(DEV_ROLE)
+@commands.check(lambda ctx: ctx.author.id == OWNER_ID or ctx.author.id in DEV_IDS)
 async def remove_subscription(ctx, user_id: int = None):
     """Remove a user ID from the Subscription role and remove the role from the user in the guild."""
     if user_id is None:
