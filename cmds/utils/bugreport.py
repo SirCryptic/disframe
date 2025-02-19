@@ -80,9 +80,17 @@ class BugReport(commands.Cog):
             await ctx.send(embed=error_embed)
 
     @commands.command(name="bugreportenable")
-    @commands.is_owner()
     async def bugreport_enable(self, ctx):
         """Enable bug reporting."""
+        if ctx.author.id not in config.DEV_IDS:
+            embed = discord.Embed(
+                title="Permission Denied",
+                description="You do not have permission to enable bug reporting.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
+            return
+
         try:
             self.enabled = True
             embed = discord.Embed(
@@ -95,9 +103,17 @@ class BugReport(commands.Cog):
             print(f"Error enabling bug reporting: {e}")
 
     @commands.command(name="bugreportdisable")
-    @commands.is_owner()
     async def bugreport_disable(self, ctx):
         """Disable bug reporting."""
+        if ctx.author.id not in config.DEV_IDS:
+            embed = discord.Embed(
+                title="Permission Denied",
+                description="You do not have permission to disable bug reporting.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
+            return
+
         try:
             self.enabled = False
             embed = discord.Embed(
