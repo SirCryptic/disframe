@@ -32,7 +32,7 @@ class RoleReaction(commands.Cog):
         embed = discord.Embed(
             title="🎨 Role Assignment",
             description="React with the corresponding emoji to gain/lose the role:",
-            color=discord.Color.purple()
+            color=discord.Color.blue()
         )
         for emoji, role_name in roles.items():
             embed.add_field(name=f"{emoji} {role_name}", value="Click to toggle this role!", inline=False)
