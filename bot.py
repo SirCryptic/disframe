@@ -118,37 +118,71 @@ async def on_ready():
 
 # Lock & Unlock Commands
 @bot.command(name="lock")
-@commands.has_role(DEV_ROLE)
+@commands.check(lambda ctx: ctx.author.id == OWNER_ID or ctx.author.id in DEV_IDS)
 async def lock(ctx):
     global bot_locked
     if bot_locked:
-        await ctx.send("The bot is already locked.")
+        embed = discord.Embed(
+            title="Bot Already Locked",
+            description="The bot is already in a locked state.",
+            color=discord.Color.orange()
+        )
+        await ctx.send(embed=embed)
         return
     bot_locked = True
-    await ctx.send(f"The bot is now locked. Only users with the `{DEV_ROLE}` role can use commands.")
+    embed = discord.Embed(
+        title="Bot Locked",
+        description="The bot has been locked. Please contact the bot owner or a developer to unlock it.",
+        color=discord.Color.red()
+    )
+    await ctx.send(embed=embed)
 
 @bot.command(name="unlock")
-@commands.has_role(DEV_ROLE)
+@commands.check(lambda ctx: ctx.author.id == OWNER_ID or ctx.author.id in DEV_IDS)
 async def unlock(ctx):
     global bot_locked
     if not bot_locked:
-        await ctx.send("The bot is already unlocked.")
+        embed = discord.Embed(
+            title="Bot Already Unlocked",
+            description="The bot is already unlocked.",
+            color=discord.Color.orange()
+        )
+        await ctx.send(embed=embed)
         return
     bot_locked = False
-    await ctx.send("The bot is now unlocked. All users can use commands.")
+    embed = discord.Embed(
+        title="Bot Unlocked",
+        description="The bot has been unlocked. All users can now use commands.",
+        color=discord.Color.green()
+    )
+    await ctx.send(embed=embed)
 
 @bot.command(name="status")
 async def status(ctx):
     if bot_locked:
-        await ctx.send(f"The bot is currently locked. Only users with the `{DEV_ROLE}` role can use commands.")
+        embed = discord.Embed(
+            title="Bot Status",
+            description="The bot is currently **locked**. Please contact the bot owner or a developer to unlock it.",
+            color=discord.Color.red()
+        )
     else:
-        await ctx.send("The bot is unlocked and functional.")
+        embed = discord.Embed(
+            title="Bot Status",
+            description="The bot is **unlocked** and functional.",
+            color=discord.Color.green()
+        )
+    await ctx.send(embed=embed)
 
 @bot.check
 async def global_check(ctx):
     if bot_locked:
-        if not any(role.name == DEV_ROLE for role in ctx.author.roles):
-            await ctx.send(f"The bot is locked! You must have the `{DEV_ROLE}` role to use commands.")
+        if ctx.author.id != OWNER_ID and ctx.author.id not in DEV_IDS:
+            embed = discord.Embed(
+                title="Bot Locked",
+                description="The bot is currently locked. Please contact the bot owner or a developer to unlock it.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
             return False
     return True
 
@@ -263,7 +297,6 @@ async def on_command_error(ctx, error):
 
     print(f"[ERROR] Command error: {error}")
 
-# Subscription Role Management Commands
 # Subscription Role Management Commands
 @bot.command(name="add_subscription")
 @commands.check(lambda ctx: ctx.author.id == OWNER_ID or ctx.author.id in DEV_IDS)
