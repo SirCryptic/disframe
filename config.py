@@ -1,12 +1,12 @@
 # config.py
 
-# Bot Token (keep it secret!)
+# Bot Token (how the token is stored will eventually change after development purposes , the update will not affect any of your functions/cogs)  
 TOKEN = "YOUR_BOT_TOKEN"
 
 # Command Prefix
 BOT_PREFIX = "-"
 
-# Role Names
+# Role Names (change these to your actual role names eg. DEV_ROLE = "admin" )
 DEV_ROLE = "dev"
 BOT_USER_ROLE = "bot user"
 MOD_ROLE = "mod"
@@ -15,12 +15,14 @@ SUBSCRIPTION_ROLE = "Subscription"
 # Server link (change this to your own server's invite link)
 SERVER_INVITE_LINK = "https://discord.gg/invite"
 
-# Set to True if you want to allow DMs, False if you don't
-ALLOWED_DM = False  # Change this to True to allow DMs, False to disallow
+# Set to True if you want to allow anyone to DM the bot, False if you don't
+ALLOWED_DM = False
 
-# Bot Version (you can change this to the version of your bot)
-BOT_VERSION = "1.0.1"  # Example version
-BOT_NAME = "DisFrame"  # Replace this with your actual bot name
+# Bot Version (you can change this to the version of your bot).
+BOT_VERSION = "1.0.3"  # Example version.
+BOT_NAME = "DisFrame"  # Replace this with your actual bot name.
 
-OWNER_ID = 891398722842427422  # Replace this with your actual Discord User ID
-DEV_IDS = [891398722842427422, 4231398722842427422]  # List of developer IDs / Trusted Users
+OWNER_ID = 1231241232312345  # Replace this with your actual Discord User ID.
+DEV_IDS = [123124234123123, 2123231234]  # List of developer IDs / Trusted Users.
+
+LOG_CHANNEL_ID = 231231242134123123 # Replace this with your desired channel ID for logging.
