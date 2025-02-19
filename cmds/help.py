@@ -72,7 +72,9 @@ class Help(commands.Cog):
                     description="The following commands are available for moderators:",
                     color=discord.Color.blue(),
                 )
-                mod_embed.add_field(name=f"```{config.BOT_PREFIX}modhelp```", value="Lists available moderation commands. [Mod Only]", inline=False)
+                mod_embed.add_field(name=f"```{config.BOT_PREFIX}modhelp```", value="Lists available moderation commands.", inline=False)
+                mod_embed.add_field(name=f"```{config.BOT_PREFIX}setlogchannel```", value="set a channel to log server activity.[Server Admins Only]", inline=False)
+                mod_embed.add_field(name=f"```{config.BOT_PREFIX}unsetlogchannel```", value="unset a channel to log server activity.[Server Admins Only]", inline=False)
                 mod_embed.set_footer(text=footer_text,
              icon_url=self.bot.user.avatar.url
         )
