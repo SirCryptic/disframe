@@ -23,6 +23,7 @@ class Help(commands.Cog):
         )
         general_embed.add_field(name=f"```{config.BOT_PREFIX}example```", value="An example command.", inline=False)
         general_embed.add_field(name=f"```{config.BOT_PREFIX}translate <LANGUAGE_CODE> <TEXT>```", value="Translate a message into another language using google translate.", inline=False)
+        general_embed.add_field(name=f"```{config.BOT_PREFIX}bug```", value="Report a bug to the Developers.", inline=False)
         general_embed.add_field(name=f"```{config.BOT_PREFIX}info```", value="Displays Information About The Bot.", inline=False)
         general_embed.add_field(name=f"```{config.BOT_PREFIX}serverinfo```", value="Displays Information About The Server.", inline=False)
         general_embed.set_footer(text=footer_text,
@@ -76,6 +77,7 @@ class Help(commands.Cog):
                 mod_embed.add_field(name=f"```{config.BOT_PREFIX}modhelp```", value="Lists available moderation commands.", inline=False)
                 mod_embed.add_field(name=f"```{config.BOT_PREFIX}setlogchannel```", value="set a channel to log server activity.[Server Admins Only]", inline=False)
                 mod_embed.add_field(name=f"```{config.BOT_PREFIX}unsetlogchannel```", value="unset a channel to log server activity.[Server Admins Only]", inline=False)
+                mod_embed.add_field(name=f"```{config.BOT_PREFIX}setuprolereaction```", value="Set up role reaction/s in your desired channel.[Member Only Needs Manage Guild]", inline=False)
                 mod_embed.set_footer(text=footer_text,
              icon_url=self.bot.user.avatar.url
         )
@@ -90,7 +92,7 @@ class Help(commands.Cog):
                 )
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}lock```", value="Lock the bot to dev users only.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}unlock```", value="Unlock the bot to all users.", inline=False)
-                dev_embed.add_field(name=f"```{config.BOT_PREFIX}adminhelp```", value="List full available commands. [Owner Only]", inline=False)
+                dev_embed.add_field(name=f"```{config.BOT_PREFIX}adminhelp```", value="List full available commands.", inline=False)
                 dev_embed.set_footer(text=footer_text,
              icon_url=self.bot.user.avatar.url
         )
