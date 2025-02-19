@@ -13,7 +13,7 @@ class Help(commands.Cog):
         """Display the help menu with organized sections and buttons for pagination."""
         
         owner = await self.bot.fetch_user(config.OWNER_ID)  # Fetch bot owner dynamically
-        footer_text = f"{config.BOT_NAME} - Beta v{config.BOT_VERSION} - Developed by {owner.name}"
+        footer_text = f"{config.BOT_NAME} - v{config.BOT_VERSION} - Developed by {owner.name}"
 
         # General Help Page (Visible to everyone)
         general_embed = discord.Embed(
@@ -28,8 +28,19 @@ class Help(commands.Cog):
              icon_url=self.bot.user.avatar.url
         )
 
+        # General Help Page (Visible to everyone)
+        fun_embed = discord.Embed(
+            title="Help Menu - Fun Commands",
+            description="The following commands are available for everyone:",
+            color=discord.Color.blue(),
+        )
+        fun_embed.add_field(name=f"```{config.BOT_PREFIX}meme```", value="Generate a random meme.", inline=False)
+        fun_embed.set_footer(text=footer_text,
+             icon_url=self.bot.user.avatar.url
+        )
+
         # Help pages initialization
-        help_pages = [general_embed]
+        help_pages = [general_embed,fun_embed]
 
         # Handle permissions and role-based embeds
         if isinstance(ctx.channel, discord.DMChannel):
@@ -38,12 +49,12 @@ class Help(commands.Cog):
                 # Dev Page (Accessible to DEV_IDS and OWNER_ID only)
                 dev_embed = discord.Embed(
                     title="Help Menu - Dev Commands",
-                    description="The following commands are available for developers only:",
+                    description="The following commands are available for the owner & devs only:",
                     color=discord.Color.blue(),
                 )
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}lock```", value="Lock the bot to dev users only.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}unlock```", value="Unlock the bot to all users.", inline=False)
-                dev_embed.add_field(name=f"```{config.BOT_PREFIX}adminhelp```", value="List full available commands. [Owner Only]", inline=False)
+                dev_embed.add_field(name=f"```{config.BOT_PREFIX}adminhelp```", value="List full available commands.", inline=False)
                 dev_embed.set_footer(text=footer_text,
              icon_url=self.bot.user.avatar.url
         )

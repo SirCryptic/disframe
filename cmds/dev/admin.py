@@ -10,6 +10,7 @@ from typing import Optional, Union
 import discord
 import os
 import copy
+import config
 
 from config import OWNER_ID, DEV_IDS, BOT_PREFIX, BOT_NAME, BOT_VERSION
 
@@ -156,7 +157,8 @@ class Admin(commands.Cog):
             embed.add_field(name="🗑️ " + f"{BOT_PREFIX}unload <module>", value="Unloads a specified cog/module.", inline=False)
 
             embed.set_footer(
-                text=f"{BOT_NAME} - Beta v{BOT_VERSION} - Developed by {self.bot.get_user(OWNER_ID).name}"
+            text=f"{config.BOT_NAME} - v{config.BOT_VERSION} - Developed by {self.bot.get_user(config.OWNER_ID).name}",
+            icon_url=self.bot.user.avatar.url
             )
 
             try:

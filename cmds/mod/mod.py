@@ -3,6 +3,7 @@ from discord.ext import commands
 import os
 import json
 import asyncio
+import config
 from config import OWNER_ID, BOT_PREFIX, MOD_ROLE
 
 class Mod(commands.Cog):
@@ -354,7 +355,10 @@ class Mod(commands.Cog):
         help_embed.add_field(name="⚠️ " + f"{BOT_PREFIX}warn <member>", value="Warn a member for inappropriate behavior.", inline=False)
         help_embed.add_field(name="📜 " + f"{BOT_PREFIX}warnings <member>", value="View the warnings of a member.", inline=False)
         help_embed.add_field(name="🧹⚠️ " + f"{BOT_PREFIX}clearwarnings <member>", value="Clear all warnings for a member.", inline=False)
-
+        help_embed.set_footer(
+                        text=f"{config.BOT_NAME} - v{config.BOT_VERSION} - Developed by {self.bot.get_user(config.OWNER_ID).name}",
+                        icon_url=self.bot.user.avatar.url
+            )
         await ctx.send(embed=help_embed)
 
 
