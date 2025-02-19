@@ -48,11 +48,11 @@ statuses = [
 ]
 
 # Background task to change bot status
-@tasks.loop(seconds=30)
+@tasks.loop(seconds=60)
 async def change_status():
     for status in statuses:
         await bot.change_presence(activity=discord.Game(name=status))
-        await asyncio.sleep(30)
+        await asyncio.sleep(60)
 
 async def ensure_roles_exist(guild):
     """Ensure required roles exist in the guild."""
