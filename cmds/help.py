@@ -56,6 +56,8 @@ class Help(commands.Cog):
                 )
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}lock```", value="Lock the bot to dev users only.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}unlock```", value="Unlock the bot to all users.", inline=False)
+                dev_embed.add_field(name=f"```{config.BOT_PREFIX}bugreportenable```", value="Enable bug reporting.", inline=False)
+                dev_embed.add_field(name=f"```{config.BOT_PREFIX}bugreportdisable```", value="Disable bug reporting.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}adminhelp```", value="List full available commands.", inline=False)
                 dev_embed.set_footer(text=footer_text,
              icon_url=self.bot.user.avatar.url
