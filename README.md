@@ -1,13 +1,18 @@
-
 <p align="center">
   <a href="https://github.com/sircryptic/DisFrame">
     <img src="https://github.com/user-attachments/assets/3b0d136e-7992-4b37-a8ab-de8051308f4f" alt="DisFrame" width="500" 
     onmouseover="this.style.transform='scale(1.05)'; this.style.opacity='0.8';" 
     onmouseout="this.style.transform='scale(1)'; this.style.opacity='1';">
   </a>
+<div align="center">
+    <a href="https://github.com/sircryptic/disframe/stargazers"><img src="https://img.shields.io/github/stars/sircryptic/disframe.svg" alt="GitHub stars"></a>
+    <a href="https://github.com/sircryptic/disframe/network"><img src="https://img.shields.io/github/forks/sircryptic/disframe.svg" alt="GitHub forks"></a>
+    <a href="https://github.com/sircryptic/disframe/watchers"><img src="https://img.shields.io/github/watchers/sircryptic/disframe.svg?style=social" alt="GitHub watchers"></a>
+    <br>
+    <a href="https://github.com/SirCryptic/disframe/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-unlicense-green.svg" alt="License"></a>
+</div>
 
-#
-A modular and extensible Discord bot framework that allows easy customization by adding new commands through Python cogs.
+# A modular and extensible Discord bot framework that allows easy customization by adding new commands through Python cogs.
 
 ## Features
 
@@ -152,7 +157,7 @@ If you'd like to contribute to this bot, feel free to fork the repository and su
 - Suggest new features.
 
 ## License
-This project is licensed under the MIT License - see the LICENSE file for details.
+see the [LICENSE](https://github.com/SirCryptic/disframe/blob/main/LICENSE) file for details.
 
 ## Support
 If you encounter any issues or need help, feel free to open an issue on this repository.
