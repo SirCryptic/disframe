@@ -4,6 +4,8 @@
     onmouseover="this.style.transform='scale(1.05)'; this.style.opacity='0.8';" 
     onmouseout="this.style.transform='scale(1)'; this.style.opacity='1';">
   </a>
+
+### A modular and extensible Discord bot framework that allows easy customization by adding new commands through Python cogs.
 <div align="center">
     <a href="https://github.com/sircryptic/disframe/stargazers"><img src="https://img.shields.io/github/stars/sircryptic/disframe.svg" alt="GitHub stars"></a>
     <a href="https://github.com/sircryptic/disframe/network"><img src="https://img.shields.io/github/forks/sircryptic/disframe.svg" alt="GitHub forks"></a>
@@ -11,8 +13,6 @@
     <br>
     <a href="https://github.com/SirCryptic/disframe/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-unlicense-green.svg" alt="License"></a>
 </div>
-
-# A modular and extensible Discord bot framework that allows easy customization by adding new commands through Python cogs.
 
 ## Features
 
