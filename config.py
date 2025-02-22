@@ -20,10 +20,8 @@ SERVER_INVITE_LINK = "https://discord.gg/invite"
 ALLOWED_DM = False
 
 # Bot Version (you can change this to the version of your bot).
-BOT_VERSION = "1.0.4"  # Example version.
+BOT_VERSION = "1.0.5"  # Example version.
 BOT_NAME = "DisFrame"  # Replace this with your actual bot name.
 
 OWNER_ID = 1231241232312345  # Replace this with your actual Discord User ID.
 DEV_IDS = [123124234123123, 2123231234]  # List of developer IDs / Trusted Users.
-
-LOG_CHANNEL_ID = 231231242134123123 # Replace this with your desired channel ID for logging.
