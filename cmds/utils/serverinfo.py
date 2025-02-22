@@ -1,123 +1,190 @@
 import discord
 from discord.ext import commands
+from typing import List
 import config
+from datetime import datetime
 
 class ServerInfo(commands.Cog):
-    """Server information commands."""
+    """Enhanced server information commands."""
 
     def __init__(self, bot):
         self.bot = bot
 
+    async def get_owner_info(self, guild: discord.Guild) -> tuple[str, str]:
+        """Fetch server owner information with fallback."""
+        owner_tag = "Unknown"
+        owner_id = "N/A"
+        if guild.owner:
+            owner_tag = f"{guild.owner.name}#{guild.owner.discriminator}"
+            owner_id = str(guild.owner.id)
+        else:
+            try:
+                owner = await guild.fetch_member(guild.owner_id)
+                owner_tag = f"{owner.name}#{owner.discriminator}"
+                owner_id = str(owner.id)
+            except (discord.NotFound, discord.Forbidden):
+                owner_tag = "Unknown (Permissions Issue)"
+            except Exception as e:
+                owner_tag = f"Error: {str(e)}"
+        return owner_tag, owner_id
+
+    async def gather_member_stats(self, members: List[discord.Member]) -> dict[str, int]:
+        """Calculate member statistics in a single pass."""
+        stats = {
+            "total": len(members),
+            "humans": 0,
+            "bots": 0,
+            "online": 0,
+            "offline": 0
+        }
+        for member in members:
+            if member.bot:
+                stats["bots"] += 1
+            else:
+                stats["humans"] += 1
+                if member.status != discord.Status.offline:
+                    stats["online"] += 1
+                else:
+                    stats["offline"] += 1
+        return stats
+
     @commands.command(name="serverinfo")
     async def serverinfo(self, ctx):
-        """Displays server information."""
-        
-        # Prevent the command from being used in DMs
-        if isinstance(ctx.channel, discord.DMChannel):
+        """Displays detailed server information."""
+        if not ctx.guild or isinstance(ctx.channel, discord.DMChannel):
             error_embed = discord.Embed(
                 title="❌ Error",
-                description="This command cannot be used in DMs. Please use it in a server I have access to.",
+                description="This command can only be used in a server where I have access.",
                 color=discord.Color.red()
             )
             error_embed.set_footer(
-                text=f"{config.BOT_NAME} - v{config.BOT_VERSION} - Developed by {self.bot.get_user(config.OWNER_ID).name}",
+                text=f"{config.BOT_NAME} v{config.BOT_VERSION} | By {self.bot.get_user(config.OWNER_ID).name}",
                 icon_url=self.bot.user.avatar.url
             )
             await ctx.send(embed=error_embed)
             return
 
+        guild = ctx.guild
+        embed = discord.Embed(
+            title=f"🏰 {guild.name} Server Info",
+            color=discord.Color.blue(),
+            timestamp=datetime.utcnow()
+        )
+
         try:
-            # Get the guild (server) information
-            guild = ctx.guild
-
-            # Attempt to get the owner directly from the guild
-            owner_tag = "Owner not found"
-            owner_id = "N/A"
-            if guild.owner:  # If the bot has cached the owner info
-                owner_tag = f"{guild.owner.name}#{guild.owner.discriminator}"
-                owner_id = str(guild.owner.id)
-            else:
-                # Manually fetch the owner if it isn't cached
-                try:
-                    owner = await guild.fetch_member(guild.owner_id)
-                    owner_tag = f"{owner.name}#{owner.discriminator}"
-                    owner_id = str(owner.id)
-                except discord.NotFound:
-                    owner_tag = "Owner not found"
-                    owner_id = "N/A"
-                except discord.Forbidden:
-                    owner_tag = "Owner accessible"
-                    owner_id = "N/A"
-                except Exception as e:
-                    owner_tag = "Error fetching owner"
-                    owner_id = "N/A"
-                    print(f"Error fetching owner: {e}")
-
-            # Gather member data
-            members = guild.members
-
-            # Create an embed with server information
-            embed = discord.Embed(
-                title="🏰 Server Info",
-                color=discord.Color.blue()
+            # Owner Info
+            owner_tag, owner_id = await self.get_owner_info(guild)
+            embed.add_field(
+                name="👑 Owner",
+                value=f"{owner_tag} (`{owner_id}`)",
+                inline=False
             )
 
-            # Owner Information (Name & ID)
-            embed.add_field(name="👑 Owner Tag", value=owner_tag, inline=True)
-            embed.add_field(name="🆔 Owner ID", value=owner_id, inline=True)
-
-            # Basic Server Info
-            embed.add_field(name="🏷 Server Name", value=f"{guild.name} | {guild.id}", inline=True)
-            embed.add_field(name="🌐 Server Locale", value=guild.preferred_locale, inline=True)
-
-            # Member and Channel Information
-            embed.add_field(name="👥 Member Count", value=str(len(members)), inline=True)
-
-            # Channel Count (text + voice channels)
-            channel_count = len([c for c in guild.channels if isinstance(c, discord.TextChannel) or isinstance(c, discord.VoiceChannel)])
-            embed.add_field(name="🔊 Channel Count", value=str(channel_count), inline=True)
-
-            # Role Count (excluding @everyone role)
-            role_count = len([r for r in guild.roles if r.name != "@everyone"])  # Exclude @everyone role
-            embed.add_field(name="🔧 Role Count", value=str(role_count), inline=True)
-
-            # Bots vs Humans
-            embed.add_field(name="🧑 Humans", value=str(len([m for m in members if not m.bot])), inline=True)
-            embed.add_field(name="🤖 Bots", value=str(len([m for m in members if m.bot])), inline=True)
-
-            embed.add_field(name="📅 Server Created On", value=str(guild.created_at.strftime('%d.%m.%Y')), inline=True)
-
-            # Verification Level
-            embed.add_field(name="🔐 Server Verification Level", value=str(guild.verification_level), inline=True)
-
-            embed.set_footer(
-                text=f"{config.BOT_NAME} - v{config.BOT_VERSION} - Developed by {self.bot.get_user(config.OWNER_ID).name}",
-                icon_url=self.bot.user.avatar.url
+            # Server Stats Section
+            embed.add_field(
+                name="🆔 Server ID",
+                value=str(guild.id),
+                inline=True
+            )
+            embed.add_field(
+                name="🌐 Locale",
+                value=guild.preferred_locale or "Unknown",
+                inline=True
+            )
+            embed.add_field(
+                name="📅 Created",
+                value=guild.created_at.strftime('%d.%m.%Y'),
+                inline=True
+            )
+            embed.add_field(
+                name="🔐 Verification",
+                value=str(guild.verification_level).title(),
+                inline=True
+            )
+            boost_level = f"Tier {guild.premium_tier} ({guild.premium_subscription_count} Boosts)"
+            embed.add_field(
+                name="🚀 Boost Status",
+                value=boost_level,
+                inline=True
+            )
+            features = ", ".join(guild.features) if guild.features else "None"
+            embed.add_field(
+                name="✨ Features",
+                value=features,
+                inline=True
             )
 
-            # Server Icon (with fallback for servers without an icon)
+            # Channel and Role Counts
+            text_channels = len([c for c in guild.channels if isinstance(c, discord.TextChannel)])
+            voice_channels = len([c for c in guild.channels if isinstance(c, discord.VoiceChannel)])
+            embed.add_field(
+                name="\n📊 Channel & Role Stats",
+                value=f"📝 Text: {text_channels}\n🎙 Voice: {voice_channels}\n🔧 Roles: {len(guild.roles) - 1}",  # Exclude @everyone
+                inline=False
+            )
+
+            # Member Stats
+            member_stats = await self.gather_member_stats(guild.members)
+            embed.add_field(
+                name="👥 Member Stats",
+                value=(
+                    f"Total: {member_stats['total']}\n"
+                    f"🧑 Humans: {member_stats['humans']} ({member_stats['online']} Online, {member_stats['offline']} Offline)\n"
+                    f"🤖 Bots: {member_stats['bots']}"
+                ),
+                inline=False
+            )
+
+            # Additional Info
+            if guild.vanity_url_code:
+                embed.add_field(
+                    name="🌐 Vanity URL",
+                    value=f"[discord.gg/{guild.vanity_url_code}](https://discord.gg/{guild.vanity_url_code})",
+                    inline=False
+                )
+            emoji_count = len(guild.emojis)
+            if emoji_count > 0:
+                embed.add_field(
+                    name="😺 Custom Emojis",
+                    value=str(emoji_count),
+                    inline=True
+                )
+
             if guild.icon:
                 embed.set_thumbnail(url=guild.icon.url)
-            else:
-                embed.set_thumbnail(url="https://user-images.githubusercontent.com/48811414/219992613-de266069-beaa-4071-ac2c-8b563fb441ac.png")
+            if guild.banner:
+                embed.set_image(url=guild.banner.url)
+            elif guild.splash:
+                embed.set_image(url=guild.splash.url)
 
-            # Send the embed
+            embed.set_footer(
+                text=f"{config.BOT_NAME} v{config.BOT_VERSION} | By {self.bot.get_user(config.OWNER_ID).name}",
+                icon_url=self.bot.user.avatar.url
+            )
             await ctx.send(embed=embed)
-            print(f"ServerInfo requested by {ctx.author} in {guild.name}")
 
-        except Exception as e:
+        except discord.Forbidden:
             error_embed = discord.Embed(
-                title="⚠️ Error",
-                description=f"An error occurred: {e}",
+                title="⚠️ Permission Error",
+                description="I lack the necessary permissions to retrieve full server info (e.g., fetch members).",
                 color=discord.Color.red()
             )
             error_embed.set_footer(
-                text=f"{config.BOT_NAME} - v{config.BOT_VERSION} - Developed by {self.bot.get_user(config.OWNER_ID).name}",
+                text=f"{config.BOT_NAME} v{config.BOT_VERSION} | By {self.bot.get_user(config.OWNER_ID).name}",
                 icon_url=self.bot.user.avatar.url
             )
             await ctx.send(embed=error_embed)
-            print(f"Error executing serverinfo command: {e}")
+        except Exception as e:
+            error_embed = discord.Embed(
+                title="⚠️ Error",
+                description=f"Failed to retrieve server info: {str(e)}",
+                color=discord.Color.red()
+            )
+            error_embed.set_footer(
+                text=f"{config.BOT_NAME} v{config.BOT_VERSION} | By {self.bot.get_user(config.OWNER_ID).name}",
+                icon_url=self.bot.user.avatar.url
+            )
+            await ctx.send(embed=error_embed)
 
-# The setup function to add the cog to the bot
 async def setup(bot):
     await bot.add_cog(ServerInfo(bot))
