@@ -22,27 +22,29 @@ class Help(commands.Cog):
             color=discord.Color.blue(),
         )
         general_embed.add_field(name=f"```{config.BOT_PREFIX}example```", value="An example command.", inline=False)
-        general_embed.add_field(name=f"```{config.BOT_PREFIX}translate <LANGUAGE_CODE> <TEXT>```", value="Translate a message into another language using google translate.", inline=False)
+        general_embed.add_field(name=f"```{config.BOT_PREFIX}translate <LANGUAGE_CODE> <TEXT>```", value="Translate a message into another language using Google Translate.", inline=False)
         general_embed.add_field(name=f"```{config.BOT_PREFIX}bug```", value="Report a bug to the Developers.", inline=False)
         general_embed.add_field(name=f"```{config.BOT_PREFIX}info```", value="Displays Information About The Bot.", inline=False)
         general_embed.add_field(name=f"```{config.BOT_PREFIX}serverinfo```", value="Displays Information About The Server.", inline=False)
-        general_embed.set_footer(text=footer_text,
-             icon_url=self.bot.user.avatar.url
+        general_embed.set_footer(
+            text=footer_text,
+            icon_url=self.bot.user.avatar.url
         )
 
-        # General Help Page (Visible to everyone)
+        # Fun Help Page (Visible to everyone)
         fun_embed = discord.Embed(
             title="Help Menu - Fun Commands",
             description="The following commands are available for everyone:",
             color=discord.Color.blue(),
         )
         fun_embed.add_field(name=f"```{config.BOT_PREFIX}meme```", value="Generate a random meme.", inline=False)
-        fun_embed.set_footer(text=footer_text,
-             icon_url=self.bot.user.avatar.url
+        fun_embed.set_footer(
+            text=footer_text,
+            icon_url=self.bot.user.avatar.url
         )
 
         # Help pages initialization
-        help_pages = [general_embed,fun_embed]
+        help_pages = [general_embed, fun_embed]
 
         # Handle permissions and role-based embeds
         if isinstance(ctx.channel, discord.DMChannel):
@@ -56,20 +58,23 @@ class Help(commands.Cog):
                 )
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}lock```", value="Lock the bot to dev users only.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}unlock```", value="Unlock the bot to all users.", inline=False)
+                dev_embed.add_field(name=f"```{config.BOT_PREFIX}adminhelp```", value="List full available commands.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}bugreportenable```", value="Enable bug reporting.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}bugreportdisable```", value="Disable bug reporting.", inline=False)
-                dev_embed.add_field(name=f"```{config.BOT_PREFIX}adminhelp```", value="List full available commands.", inline=False)
-                dev_embed.set_footer(text=footer_text,
-             icon_url=self.bot.user.avatar.url
-        )
-
+                dev_embed.add_field(name=f"```{config.BOT_PREFIX}add_subscription <user_id|@>```", value="Add a user to the subscription list.", inline=False)
+                dev_embed.add_field(name=f"```{config.BOT_PREFIX}remove_subscription <user_id|@>```", value="Remove a user from the subscription list.", inline=False)
+                dev_embed.add_field(name=f"```{config.BOT_PREFIX}check_subscription [user_id|@]```", value="Check if a user (or yourself if no ID or @) is subscribed.", inline=False)
+                dev_embed.set_footer(
+                    text=footer_text,
+                    icon_url=self.bot.user.avatar.url
+                )
                 help_pages.append(dev_embed)
-            # Mod page is excluded in DMs
+            # Mod page excluded in DMs
         else:
             # In servers
             user_roles = [role.name.lower() for role in ctx.author.roles]
 
-            # Mod Page (Accessible to MOD_ROLE, OWNER_ID, or DEV_IDS only)
+            # Mod Page (Accessible to MOD_ROLE, OWNER_ID, DEV_IDS, or manage_messages permission)
             if config.MOD_ROLE.lower() in user_roles or ctx.author.guild_permissions.manage_messages or ctx.author.id == config.OWNER_ID or ctx.author.id in config.DEV_IDS:
                 mod_embed = discord.Embed(
                     title="Help Menu - Mod Commands",
@@ -77,12 +82,12 @@ class Help(commands.Cog):
                     color=discord.Color.blue(),
                 )
                 mod_embed.add_field(name=f"```{config.BOT_PREFIX}modhelp```", value="Lists available moderation commands.", inline=False)
-                mod_embed.add_field(name=f"```{config.BOT_PREFIX}setlogchannel```", value="set a channel to log server activity.[Server Admins Only]", inline=False)
-                mod_embed.add_field(name=f"```{config.BOT_PREFIX}unsetlogchannel```", value="unset a channel to log server activity.[Server Admins Only]", inline=False)
-                mod_embed.add_field(name=f"```{config.BOT_PREFIX}setuprolereaction```", value="Set up role reaction/s in your desired channel.[Member Only Needs Manage Guild]", inline=False)
-                mod_embed.set_footer(text=footer_text,
-             icon_url=self.bot.user.avatar.url
-        )
+                mod_embed.add_field(name=f"```{config.BOT_PREFIX}automod```", value="Configure auto-moderation settings, including log channel setup.", inline=False)
+                mod_embed.add_field(name=f"```{config.BOT_PREFIX}setuprolereaction```", value="Set up role reactions in your desired channel. [Requires Manage Guild]", inline=False)
+                mod_embed.set_footer(
+                    text=footer_text,
+                    icon_url=self.bot.user.avatar.url
+                )
                 help_pages.append(mod_embed)
 
             # Dev Page (Accessible to DEV_IDS and OWNER_ID only)
@@ -94,13 +99,16 @@ class Help(commands.Cog):
                 )
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}lock```", value="Lock the bot to dev users only.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}unlock```", value="Unlock the bot to all users.", inline=False)
+                dev_embed.add_field(name=f"```{config.BOT_PREFIX}adminhelp```", value="List full available commands.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}bugreportenable```", value="Enable bug reporting.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}bugreportdisable```", value="Disable bug reporting.", inline=False)
-                dev_embed.add_field(name=f"```{config.BOT_PREFIX}adminhelp```", value="List full available commands.", inline=False)
-                dev_embed.set_footer(text=footer_text,
-             icon_url=self.bot.user.avatar.url
-        )
-
+                dev_embed.add_field(name=f"```{config.BOT_PREFIX}add_subscription <user_id>```", value="Add a user to the subscription list.", inline=False)
+                dev_embed.add_field(name=f"```{config.BOT_PREFIX}remove_subscription <user_id>```", value="Remove a user from the subscription list.", inline=False)
+                dev_embed.add_field(name=f"```{config.BOT_PREFIX}check_subscription [user_id|@]```", value="Check if a user (or yourself if no ID or @) is subscribed.", inline=False)
+                dev_embed.set_footer(
+                    text=footer_text,
+                    icon_url=self.bot.user.avatar.url
+                )
                 help_pages.append(dev_embed)
 
         # Send help menu with pagination
@@ -148,6 +156,5 @@ class HelpView(discord.ui.View):
             except discord.NotFound:
                 pass
 
-# Setup function
 async def setup(bot):
     await bot.add_cog(Help(bot))
