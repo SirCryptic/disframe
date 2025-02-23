@@ -25,3 +25,8 @@ BOT_NAME = "DisFrame"  # Replace this with your actual bot name.
 
 OWNER_ID = 1231241232312345  # Replace this with your actual Discord User ID.
 DEV_IDS = [123124234123123, 2123231234]  # List of developer IDs / Trusted Users.
+
+# note ( had to use reddit api itself for meme cog the api key is free / you can remove this and the cog itself if you wish not to use it )
+REDDIT_CLIENT_ID = "your_client_id"
+REDDIT_CLIENT_SECRET = "your_secret_key"
+REDDIT_USER_AGENT = "discord:DisFrame:1.6 by SirCryptic"
