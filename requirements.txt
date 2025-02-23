@@ -1,3 +1,4 @@
+praw
 asyncio
 discord.py==2.4.0
 psutil==6.1.1
