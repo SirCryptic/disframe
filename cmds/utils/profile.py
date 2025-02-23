@@ -5,7 +5,7 @@ import config
 from datetime import datetime
 
 class ProfileCog(commands.Cog):
-    """cog for user profile-related commands with improved layout."""
+    """Enhanced cog for user profile-related commands with improved layout."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -96,11 +96,12 @@ class ProfileCog(commands.Cog):
                     inline=False
                 )
 
+            # OSINT Links (updated Twitter to X)
             username = user.name
             google_query = f"{username}#{user.discriminator} discord site:*.edu | site:*.org | site:*.gov -inurl:(signup | login)"
             osint_links = (
                 f"[🔍 Google](https://www.google.com/search?q={urllib.parse.quote(google_query)})\n"
-                f"[✖️ X](https://x.com/{urllib.parse.quote(username)})\n"
+                f"[✖️ X](https://x.com/{urllib.parse.quote(username)})\n"  # Updated Twitter to X
                 f"[🌐 Reddit](https://www.reddit.com/user/{urllib.parse.quote(username)})\n"
                 f"[💻 GitHub](https://github.com/{urllib.parse.quote(username)})\n"
                 f"[📸 Instagram](https://www.instagram.com/{urllib.parse.quote(username)})\n"
