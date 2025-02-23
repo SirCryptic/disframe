@@ -8,44 +8,84 @@ from config import OWNER_ID, BOT_PREFIX, MOD_ROLE, TIMEOUT_ROLE_NAME
 from datetime import datetime, timedelta
 
 class Mod(commands.Cog):
-    """Moderation commands such as kick, ban, mute, etc."""
+    """Enhanced moderation commands such as kick, ban, mute, etc., integrating AutoModeration warnings."""
 
     def __init__(self, bot):
         self.bot = bot
-        self.warns_file = "warnings.json"
-        if not os.path.exists(self.warns_file):
-            with open(self.warns_file, "w") as f:
-                json.dump({}, f)
+        self.data_dir = "data"
+        os.makedirs(self.data_dir, exist_ok=True)
+        self.settings_file = os.path.join(self.data_dir, "automod_data.json")
 
-    def load_warns(self, guild_id):
-        """Load warnings from the JSON file for a specific guild."""
-        with open(self.warns_file, "r") as f:
-            data = json.load(f)
-        return data.get(str(guild_id), {})
+    def load_settings(self, guild_id):
+        """Load settings from automod_data.json for a specific guild."""
+        if os.path.exists(self.settings_file):
+            with open(self.settings_file, "r") as f:
+                try:
+                    data = json.load(f)
+                    return data.get(str(guild_id), {})
+                except json.JSONDecodeError:
+                    return {}
+        return {}
 
-    def save_warns(self, guild_id, warns):
-        """Save warnings to the JSON file for a specific guild."""
-        with open(self.warns_file, "r+") as f:
+    def save_settings(self, guild_id, settings):
+        """Save settings to automod_data.json for a specific guild."""
+        with open(self.settings_file, "r+") as f:
             try:
                 data = json.load(f)
-            except json.JSONDecodeError:
+            except (json.JSONDecodeError, FileNotFoundError):
                 data = {}
-            data[str(guild_id)] = warns
+            data[str(guild_id)] = settings
             f.seek(0)
             json.dump(data, f, indent=4)
             f.truncate()
 
+    def get_guild_settings(self, guild_id):
+        """Get or initialize guild settings from automod_data.json."""
+        guild_id_str = str(guild_id)
+        settings = self.load_settings(guild_id)
+        if not settings:
+            settings = {
+                "enabled": False,
+                "banned_words": [],
+                "mute_threshold": 5,
+                "ban_threshold": 10,
+                "mute_duration": 60,
+                "warnings": [],
+                "log_channel": None,
+                "ban_default_offensive": False
+            }
+            self.save_settings(guild_id, settings)
+        else:
+            # Migrate old integer warnings if present
+            if "warnings" in settings and not isinstance(settings["warnings"], list):
+                settings["warnings"] = [{"reason": "Legacy warning", "issuer": "Unknown", "timestamp": datetime.utcnow().isoformat(), "user_id": "unknown"}] if settings["warnings"] > 0 else []
+                self.save_settings(guild_id, settings)
+        return settings
+
+    def create_embed(self, title, description, color=discord.Color.blue(), fields=None):
+        """Helper method to create embeds."""
+        embed = discord.Embed(
+            title=title,
+            description=description,
+            color=color,
+            timestamp=datetime.utcnow()
+        )
+        if fields:
+            for name, value in fields:
+                embed.add_field(name=name, value=value, inline=True)
+        embed.set_footer(
+            text=f"{config.BOT_NAME} v{config.BOT_VERSION} | By {self.bot.get_user(config.OWNER_ID).name}",
+            icon_url=self.bot.user.avatar.url
+        )
+        return embed
+
     async def _check_dm(self, ctx):
         """Check if the command is used in a DM and send an error."""
         if ctx.guild is None:
-            embed = discord.Embed(
-                title="❌ Cannot Use in DMs",
-                description="Moderation commands can only be used in a server.",
+            embed = self.create_embed(
+                "❌ Cannot Use in DMs",
+                "Moderation commands can only be used in a server.",
                 color=discord.Color.red()
-            )
-            embed.set_footer(
-                text=f"{config.BOT_NAME} v{config.BOT_VERSION} | By {self.bot.get_user(config.OWNER_ID).name}",
-                icon_url=self.bot.user.avatar.url
             )
             await ctx.send(embed=embed, delete_after=10)
             return False
@@ -53,20 +93,14 @@ class Mod(commands.Cog):
 
     async def _send_error_message(self, ctx, message, details=None):
         """Send error messages with optional details, lasting longer."""
-        embed = discord.Embed(
-            title="❌ Error",
-            description=message,
+        embed = self.create_embed(
+            "❌ Error",
+            message,
             color=discord.Color.red(),
-            timestamp=datetime.utcnow()
-        )
-        if details:
-            embed.add_field(name="Details", value=str(details), inline=False)
-        embed.set_footer(
-            text=f"{config.BOT_NAME} v{config.BOT_VERSION} | By {self.bot.get_user(config.OWNER_ID).name}",
-            icon_url=self.bot.user.avatar.url
+            fields=[("Details", str(details))] if details else None
         )
         error_message = await ctx.send(embed=embed)
-        await asyncio.sleep(10)  # Increased from 5s to 10s for readability
+        await asyncio.sleep(10)
         try:
             await ctx.message.delete()
             await error_message.delete()
@@ -84,14 +118,11 @@ class Mod(commands.Cog):
                     permissions=discord.Permissions.none(),
                     reason="Created for mute functionality"
                 )
-                # Apply role to channels to deny speaking permissions
                 for channel in guild.text_channels:
                     await channel.set_permissions(timeout_role, send_messages=False, add_reactions=False)
                 for channel in guild.voice_channels:
                     await channel.set_permissions(timeout_role, speak=False, connect=False)
-                print(f"Created and configured timeout role '{TIMEOUT_ROLE_NAME}' in guild {guild.name}")
             except discord.errors.Forbidden:
-                print(f"Failed to create timeout role in guild {guild.name}. Insufficient permissions.")
                 return None
         return timeout_role
 
@@ -104,27 +135,28 @@ class Mod(commands.Cog):
 
         try:
             await member.kick(reason=reason)
-            embed = discord.Embed(
-                title="✋ Member Kicked",
-                description=f"{member.mention} (`{member.id}`) has been kicked.",
+            embed = self.create_embed(
+                "✋ Member Kicked",
+                f"{member.mention} (`{member.id}`) has been kicked.",
                 color=discord.Color.green(),
-                timestamp=datetime.utcnow()
+                fields=[
+                    ("Moderator", ctx.author.mention),
+                    ("Reason", reason or "No reason provided")
+                ]
             )
-            embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
-            embed.add_field(name="Reason", value=reason or "No reason provided", inline=True)
-            embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/7235/7235288.png")  # Moderation icon
+            embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/7235/7235288.png")
             await ctx.send(embed=embed)
 
-            dm_embed = discord.Embed(
-                title="✋ Kicked",
-                description=f"You were kicked from **{ctx.guild.name}**.",
-                color=discord.Color.red()
+            dm_embed = self.create_embed(
+                "✋ Kicked",
+                f"You were kicked from **{ctx.guild.name}**.",
+                color=discord.Color.red(),
+                fields=[("Reason", reason or "No reason provided")]
             )
-            dm_embed.add_field(name="Reason", value=reason or "No reason provided", inline=False)
             try:
                 await member.send(embed=dm_embed)
             except discord.errors.Forbidden:
-                print(f"Could not send DM to {member.name}")
+                pass
 
         except discord.errors.Forbidden:
             await self._send_error_message(ctx, f"I lack permission to kick {member.mention}.")
@@ -140,27 +172,28 @@ class Mod(commands.Cog):
 
         try:
             await member.ban(reason=reason)
-            embed = discord.Embed(
-                title="⛔ Member Banned",
-                description=f"{member.mention} (`{member.id}`) has been banned.",
+            embed = self.create_embed(
+                "⛔ Member Banned",
+                f"{member.mention} (`{member.id}`) has been banned.",
                 color=discord.Color.red(),
-                timestamp=datetime.utcnow()
+                fields=[
+                    ("Moderator", ctx.author.mention),
+                    ("Reason", reason or "No reason provided")
+                ]
             )
-            embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
-            embed.add_field(name="Reason", value=reason or "No reason provided", inline=True)
             embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/7235/7235288.png")
             await ctx.send(embed=embed)
 
-            dm_embed = discord.Embed(
-                title="⛔ Banned",
-                description=f"You were banned from **{ctx.guild.name}**.",
-                color=discord.Color.red()
+            dm_embed = self.create_embed(
+                "⛔ Banned",
+                f"You were banned from **{ctx.guild.name}**.",
+                color=discord.Color.red(),
+                fields=[("Reason", reason or "No reason provided")]
             )
-            dm_embed.add_field(name="Reason", value=reason or "No reason provided", inline=False)
             try:
                 await member.send(embed=dm_embed)
             except discord.errors.Forbidden:
-                print(f"Could not send DM to {member.name}")
+                pass
 
         except discord.errors.Forbidden:
             await self._send_error_message(ctx, f"I lack permission to ban {member.mention}.")
@@ -177,27 +210,28 @@ class Mod(commands.Cog):
         try:
             user = await self.bot.fetch_user(int(user_id))
             await ctx.guild.unban(user, reason=reason)
-            embed = discord.Embed(
-                title="🔓 User Unbanned",
-                description=f"{user.mention} (`{user.id}`) has been unbanned.",
+            embed = self.create_embed(
+                "🔓 User Unbanned",
+                f"{user.mention} (`{user.id}`) has been unbanned.",
                 color=discord.Color.green(),
-                timestamp=datetime.utcnow()
+                fields=[
+                    ("Moderator", ctx.author.mention),
+                    ("Reason", reason or "No reason provided")
+                ]
             )
-            embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
-            embed.add_field(name="Reason", value=reason or "No reason provided", inline=True)
             embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/7235/7235288.png")
             await ctx.send(embed=embed)
 
-            dm_embed = discord.Embed(
-                title="🔓 Unbanned",
-                description=f"You have been unbanned from **{ctx.guild.name}**.",
-                color=discord.Color.green()
+            dm_embed = self.create_embed(
+                "🔓 Unbanned",
+                f"You have been unbanned from **{ctx.guild.name}**.",
+                color=discord.Color.green(),
+                fields=[("Reason", reason or "No reason provided")]
             )
-            dm_embed.add_field(name="Reason", value=reason or "No reason provided", inline=False)
             try:
                 await user.send(embed=dm_embed)
             except discord.errors.Forbidden:
-                print(f"Could not send DM to {user.name}")
+                pass
 
         except ValueError:
             await self._send_error_message(ctx, "Invalid user ID. Please provide a numeric ID.")
@@ -223,14 +257,13 @@ class Mod(commands.Cog):
                 await self._send_error_message(ctx, "Cannot delete more than 100 messages at once.")
                 return
 
-            deleted = await ctx.channel.purge(limit=amount + 1)  # +1 includes command message
-            embed = discord.Embed(
-                title="🧹 Messages Cleared",
-                description=f"Cleared {len(deleted) - 1} messages from {ctx.channel.mention}.",
+            deleted = await ctx.channel.purge(limit=amount + 1)
+            embed = self.create_embed(
+                "🧹 Messages Cleared",
+                f"Cleared {len(deleted) - 1} messages from {ctx.channel.mention}.",
                 color=discord.Color.green(),
-                timestamp=datetime.utcnow()
+                fields=[("Moderator", ctx.author.mention)]
             )
-            embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
             embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/7235/7235288.png")
             await ctx.send(embed=embed, delete_after=10)
 
@@ -256,39 +289,41 @@ class Mod(commands.Cog):
                 return
 
             await member.add_roles(mute_role, reason=reason)
-            embed = discord.Embed(
-                title="🤐 Member Muted",
-                description=f"{member.mention} (`{member.id}`) has been muted.",
+            embed = self.create_embed(
+                "🤐 Member Muted",
+                f"{member.mention} (`{member.id}`) has been muted.",
                 color=discord.Color.orange(),
-                timestamp=datetime.utcnow()
+                fields=[
+                    ("Moderator", ctx.author.mention),
+                    ("Reason", reason or "No reason provided"),
+                    ("Duration", f"{duration} minutes" if duration else "Indefinite")
+                ]
             )
-            embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
-            embed.add_field(name="Reason", value=reason or "No reason provided", inline=True)
-            embed.add_field(name="Duration", value=f"{duration} minutes" if duration else "Indefinite", inline=True)
             embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/7235/7235288.png")
             await ctx.send(embed=embed)
 
-            dm_embed = discord.Embed(
-                title="🤐 Muted",
-                description=f"You were muted in **{ctx.guild.name}**.",
-                color=discord.Color.orange()
+            dm_embed = self.create_embed(
+                "🤐 Muted",
+                f"You were muted in **{ctx.guild.name}**.",
+                color=discord.Color.orange(),
+                fields=[
+                    ("Reason", reason or "No reason provided"),
+                    ("Duration", f"{duration} minutes" if duration else "Indefinite")
+                ]
             )
-            dm_embed.add_field(name="Reason", value=reason or "No reason provided", inline=False)
-            dm_embed.add_field(name="Duration", value=f"{duration} minutes" if duration else "Indefinite", inline=False)
             try:
                 await member.send(embed=dm_embed)
             except discord.errors.Forbidden:
-                print(f"Could not send DM to {member.name}")
+                pass
 
             if duration:
                 await asyncio.sleep(duration * 60)
                 if mute_role in member.roles:
                     await member.remove_roles(mute_role)
-                    unmute_embed = discord.Embed(
-                        title="🗣️ Mute Expired",
-                        description=f"{member.mention} (`{member.id}`) has been unmuted after {duration} minutes.",
-                        color=discord.Color.green(),
-                        timestamp=datetime.utcnow()
+                    unmute_embed = self.create_embed(
+                        "🗣️ Mute Expired",
+                        f"{member.mention} (`{member.id}`) has been unmuted after {duration} minutes.",
+                        color=discord.Color.green()
                     )
                     await ctx.send(embed=unmute_embed)
 
@@ -311,25 +346,24 @@ class Mod(commands.Cog):
                 return
 
             await member.remove_roles(mute_role)
-            embed = discord.Embed(
-                title="🗣️ Member Unmuted",
-                description=f"{member.mention} (`{member.id}`) has been unmuted.",
+            embed = self.create_embed(
+                "🗣️ Member Unmuted",
+                f"{member.mention} (`{member.id}`) has been unmuted.",
                 color=discord.Color.green(),
-                timestamp=datetime.utcnow()
+                fields=[("Moderator", ctx.author.mention)]
             )
-            embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
             embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/7235/7235288.png")
             await ctx.send(embed=embed)
 
-            dm_embed = discord.Embed(
-                title="🗣️ Unmuted",
-                description=f"You have been unmuted in **{ctx.guild.name}**.",
+            dm_embed = self.create_embed(
+                "🗣️ Unmuted",
+                f"You have been unmuted in **{ctx.guild.name}**.",
                 color=discord.Color.green()
             )
             try:
                 await member.send(embed=dm_embed)
             except discord.errors.Forbidden:
-                print(f"Could not send DM to {member.name}")
+                pass
 
         except discord.errors.Forbidden:
             await self._send_error_message(ctx, f"I lack permission to unmute {member.mention}.")
@@ -339,73 +373,89 @@ class Mod(commands.Cog):
     @commands.command(name="warn")
     @commands.has_permissions(kick_members=True)
     async def warn(self, ctx, member: discord.Member, *, reason: str = None):
-        """Warn a member for inappropriate behavior."""
+        """Warn a member for inappropriate behavior, integrating with AutoModeration warnings."""
         if not await self._check_dm(ctx):
             return
 
         try:
             guild_id = ctx.guild.id
-            warns = self.load_warns(guild_id)
-            max_warns = 5  # Configurable threshold
+            settings = self.get_guild_settings(guild_id)
+            max_warns = settings["ban_threshold"]
+            user_id_str = str(member.id)
 
-            if str(member.id) not in warns:
-                warns[str(member.id)] = []
-
-            warns[str(member.id)].append({
+            warning = {
                 "reason": reason or "No reason provided",
+                "issuer": str(ctx.author),
                 "timestamp": datetime.utcnow().isoformat(),
-                "moderator": str(ctx.author)
-            })
+                "user_id": user_id_str
+            }
+            settings["warnings"].append(warning)
+            user_warnings = [w for w in settings["warnings"] if w.get("user_id", "unknown") == user_id_str]
+            warning_count = len(user_warnings)
 
-            warn_count = len(warns[str(member.id)])
-            if warn_count >= max_warns:
+            if warning_count >= max_warns:
                 await member.ban(reason=f"Auto-ban after {max_warns} warnings. Last reason: {reason}")
-                embed = discord.Embed(
-                    title="⛔ Member Auto-Banned",
-                    description=f"{member.mention} (`{member.id}`) banned after {max_warns} warnings.",
+                embed = self.create_embed(
+                    "⛔ Member Auto-Banned",
+                    f"{member.mention} (`{member.id}`) banned after {max_warns} warnings.",
                     color=discord.Color.red(),
-                    timestamp=datetime.utcnow()
+                    fields=[
+                        ("Last Reason", warning["reason"]),
+                        ("Moderator", ctx.author.mention),
+                        ("Timestamp", warning["timestamp"]),
+                        ("Total Warnings", f"{warning_count}")
+                    ]
                 )
-                embed.add_field(name="Last Reason", value=reason or "No reason provided", inline=True)
-                embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
                 embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/7235/7235288.png")
                 await ctx.send(embed=embed)
 
-                dm_embed = discord.Embed(
-                    title="⛔ Auto-Banned",
-                    description=f"You were banned from **{ctx.guild.name}** after {max_warns} warnings.",
-                    color=discord.Color.red()
+                dm_embed = self.create_embed(
+                    "⛔ Auto-Banned",
+                    f"You were banned from **{ctx.guild.name}** after exceeding the warning threshold.",
+                    color=discord.Color.red(),
+                    fields=[
+                        ("Reason", warning["reason"]),
+                        ("Warned By", ctx.author.mention),
+                        ("Timestamp", warning["timestamp"]),
+                        ("Total Warnings", f"{warning_count}/{max_warns}")
+                    ]
                 )
-                dm_embed.add_field(name="Last Reason", value=reason or "No reason provided", inline=False)
                 try:
                     await member.send(embed=dm_embed)
                 except discord.errors.Forbidden:
-                    print(f"Could not send DM to {member.name}")
+                    pass
+                settings["warnings"] = [w for w in settings["warnings"] if w.get("user_id", "unknown") != user_id_str]
             else:
-                self.save_warns(guild_id, warns)
-                embed = discord.Embed(
-                    title="⚠️ Member Warned",
-                    description=f"{member.mention} (`{member.id}`) has been warned.",
+                self.save_settings(guild_id, settings)
+                embed = self.create_embed(
+                    "⚠️ Member Warned",
+                    f"{member.mention} (`{member.id}`) has been warned.",
                     color=discord.Color.yellow(),
-                    timestamp=datetime.utcnow()
+                    fields=[
+                        ("Reason", warning["reason"]),
+                        ("Warn Count", f"{warning_count}/{settings['mute_threshold']} Before Mute | (Ban at {max_warns})"),
+                        ("Moderator", ctx.author.mention),
+                        ("Timestamp", warning["timestamp"])
+                    ]
                 )
-                embed.add_field(name="Reason", value=reason or "No reason provided", inline=True)
-                embed.add_field(name="Warn Count", value=f"{warn_count}/{max_warns}", inline=True)
-                embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
                 embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/7235/7235288.png")
                 await ctx.send(embed=embed)
 
-                dm_embed = discord.Embed(
-                    title="⚠️ Warned",
-                    description=f"You were warned in **{ctx.guild.name}**.",
-                    color=discord.Color.yellow()
+                dm_embed = self.create_embed(
+                    "⚠️ Warned",
+                    f"You were warned in **{ctx.guild.name}**.",
+                    color=discord.Color.yellow(),
+                    fields=[
+                        ("Reason", warning["reason"]),
+                        ("Warned By", ctx.author.mention),
+                        ("Timestamp", warning["timestamp"]),
+                        ("Warn Count", f"{warning_count}/{settings['mute_threshold']} Before Mute | (Ban at {max_warns})")
+                    ]
                 )
-                dm_embed.add_field(name="Reason", value=reason or "No reason provided", inline=False)
-                dm_embed.add_field(name="Warn Count", value=f"{warn_count}/{max_warns}", inline=False)
                 try:
                     await member.send(embed=dm_embed)
                 except discord.errors.Forbidden:
-                    print(f"Could not send DM to {member.name}")
+                    pass
 
         except discord.errors.Forbidden:
             await self._send_error_message(ctx, f"I lack permission to warn/ban {member.mention}.")
@@ -420,33 +470,35 @@ class Mod(commands.Cog):
 
         try:
             guild_id = ctx.guild.id
-            warns = self.load_warns(guild_id)
+            settings = self.get_guild_settings(guild_id)
+            user_id_str = str(member.id)
+            # Handle both old (no user_id) and new (with user_id) warnings
+            user_warnings = [w for w in settings["warnings"] if w.get("user_id", user_id_str) == user_id_str]
 
-            if str(member.id) in warns and warns[str(member.id)]:
-                embed = discord.Embed(
-                    title=f"📜 Warnings for {member}",
-                    description=f"{member.mention} (`{member.id}`) has {len(warns[str(member.id)])} warnings.",
-                    color=discord.Color.orange(),
-                    timestamp=datetime.utcnow()
+            if user_warnings:
+                embed = self.create_embed(
+                    f"📜 Warnings for {member}",
+                    f"{member.mention} (`{member.id}`) has {len(user_warnings)} warnings.",
+                    color=discord.Color.orange()
                 )
-                for i, warn in enumerate(warns[str(member.id)], 1):
+                for i, warning in enumerate(user_warnings, 1):
                     embed.add_field(
-                        name=f"Warn {i}",
-                        value=f"**Reason:** {warn['reason']}\n**Date:** {warn['timestamp'][:10]}\n**Moderator:** {warn['moderator']}",
+                        name=f"Warning {i}",
+                        value=f"**Reason:** {warning['reason']}\n**Issuer:** {warning['issuer']}\n**Timestamp:** {warning['timestamp']}",
                         inline=False
                     )
+                embed.add_field(
+                    name="Total",
+                    value=f"{len(user_warnings)}/{settings['mute_threshold']} Before Mute | (Ban at {settings['ban_threshold']})",
+                    inline=True
+                )
                 embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/7235/7235288.png")
             else:
-                embed = discord.Embed(
-                    title="📜 No Warnings",
-                    description=f"{member.mention} (`{member.id}`) has no warnings.",
-                    color=discord.Color.green(),
-                    timestamp=datetime.utcnow()
+                embed = self.create_embed(
+                    "📜 No Warnings",
+                    f"{member.mention} (`{member.id}`) has no warnings.",
+                    color=discord.Color.green()
                 )
-            embed.set_footer(
-                text=f"{config.BOT_NAME} v{config.BOT_VERSION} | By {self.bot.get_user(config.OWNER_ID).name}",
-                icon_url=self.bot.user.avatar.url
-            )
             await ctx.send(embed=embed)
 
         except Exception as e:
@@ -461,36 +513,40 @@ class Mod(commands.Cog):
 
         try:
             guild_id = ctx.guild.id
-            warns = self.load_warns(guild_id)
+            settings = self.get_guild_settings(guild_id)
+            user_id_str = str(member.id)
+            user_warnings = [w for w in settings["warnings"] if w.get("user_id", user_id_str) == user_id_str]
 
-            if str(member.id) in warns and warns[str(member.id)]:
-                del warns[str(member.id)]
-                self.save_warns(guild_id, warns)
-                embed = discord.Embed(
-                    title="🧹 Warnings Cleared",
-                    description=f"All warnings for {member.mention} (`{member.id}`) have been cleared.",
+            if user_warnings:
+                settings["warnings"] = [w for w in settings["warnings"] if w.get("user_id", user_id_str) != user_id_str]
+                self.save_settings(guild_id, settings)
+                embed = self.create_embed(
+                    "🧹 Warnings Cleared",
+                    f"All warnings for {member.mention} (`{member.id}`) have been cleared.",
                     color=discord.Color.green(),
-                    timestamp=datetime.utcnow()
+                    fields=[
+                        ("Moderator", ctx.author.mention),
+                        ("Timestamp", datetime.utcnow().isoformat())
+                    ]
                 )
-                embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
                 embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/7235/7235288.png")
                 await ctx.send(embed=embed)
 
-                dm_embed = discord.Embed(
-                    title="✅ Warnings Cleared",
-                    description=f"All your warnings in **{ctx.guild.name}** have been cleared.",
-                    color=discord.Color.green()
+                dm_embed = self.create_embed(
+                    "✅ Warnings Cleared",
+                    f"All your warnings in **{ctx.guild.name}** have been cleared.",
+                    color=discord.Color.green(),
+                    fields=[("Moderator", ctx.author.mention)]
                 )
                 try:
                     await member.send(embed=dm_embed)
                 except discord.errors.Forbidden:
-                    print(f"Could not send DM to {member.name}")
+                    pass
             else:
-                embed = discord.Embed(
-                    title="🧹 No Warnings to Clear",
-                    description=f"{member.mention} (`{member.id}`) has no warnings.",
-                    color=discord.Color.orange(),
-                    timestamp=datetime.utcnow()
+                embed = self.create_embed(
+                    "🧹 No Warnings to Clear",
+                    f"{member.mention} (`{member.id}`) has no warnings.",
+                    color=discord.Color.orange()
                 )
                 embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/7235/7235288.png")
                 await ctx.send(embed=embed)
@@ -509,41 +565,33 @@ class Mod(commands.Cog):
         try:
             mod_role = discord.utils.get(ctx.guild.roles, name=MOD_ROLE)
             if mod_role not in ctx.author.roles and ctx.author.id != OWNER_ID:
-                embed = discord.Embed(
-                    title="❌ Access Denied",
-                    description=f"You need the `{MOD_ROLE}` role to use moderation commands.",
-                    color=discord.Color.red(),
-                    timestamp=datetime.utcnow()
-                )
-                embed.set_footer(
-                    text=f"{config.BOT_NAME} v{config.BOT_VERSION} | By {self.bot.get_user(config.OWNER_ID).name}",
-                    icon_url=self.bot.user.avatar.url
+                embed = self.create_embed(
+                    "❌ Access Denied",
+                    f"You need the `{MOD_ROLE}` role to use moderation commands.",
+                    color=discord.Color.red()
                 )
                 appeal_message = await ctx.send(embed=embed)
                 await asyncio.sleep(10)
                 await appeal_message.delete()
                 return
 
-            help_embed = discord.Embed(
-                title="🛡️ Moderation Commands",
-                description=f"Commands for managing {ctx.guild.name}:",
+            help_embed = self.create_embed(
+                "🛡️ Moderation Commands",
+                f"Commands for managing {ctx.guild.name} (warnings shared with AutoModeration):",
                 color=discord.Color.blue(),
-                timestamp=datetime.utcnow()
+                fields=[
+                    (f"✋ {BOT_PREFIX}kick <member> [reason]", "Kick a member."),
+                    (f"⛔ {BOT_PREFIX}ban <member> [reason]", "Ban a member."),
+                    (f"🔓 {BOT_PREFIX}unban <user_id> [reason]", "Unban a user by ID."),
+                    (f"🧹 {BOT_PREFIX}clear <amount>", "Clear messages (max 100)."),
+                    (f"🤐 {BOT_PREFIX}mute <member> [minutes] [reason]", "Mute a member (optional duration)."),
+                    (f"🗣️ {BOT_PREFIX}unmute <member>", "Unmute a member."),
+                    (f"⚠️ {BOT_PREFIX}warn <member> [reason]", "Warn a member (auto-ban at threshold)."),
+                    (f"📜 {BOT_PREFIX}warnings <member>", "View a member’s warnings."),
+                    (f"🧹⚠️ {BOT_PREFIX}clearwarnings <member>", "Clear a member’s warnings.")
+                ]
             )
-            help_embed.add_field(name=f"✋ {BOT_PREFIX}kick <member> [reason]", value="Kick a member.", inline=False)
-            help_embed.add_field(name=f"⛔ {BOT_PREFIX}ban <member> [reason]", value="Ban a member.", inline=False)
-            help_embed.add_field(name=f"🔓 {BOT_PREFIX}unban <user_id> [reason]", value="Unban a user by ID.", inline=False)
-            help_embed.add_field(name=f"🧹 {BOT_PREFIX}clear <amount>", value="Clear messages (max 100).", inline=False)
-            help_embed.add_field(name=f"🤐 {BOT_PREFIX}mute <member> [minutes] [reason]", value="Mute a member (optional duration).", inline=False)
-            help_embed.add_field(name=f"🗣️ {BOT_PREFIX}unmute <member>", value="Unmute a member.", inline=False)
-            help_embed.add_field(name=f"⚠️ {BOT_PREFIX}warn <member> [reason]", value="Warn a member (auto-ban at 5).", inline=False)
-            help_embed.add_field(name=f"📜 {BOT_PREFIX}warnings <member>", value="View a member’s warnings.", inline=False)
-            help_embed.add_field(name=f"🧹⚠️ {BOT_PREFIX}clearwarnings <member>", value="Clear a member’s warnings.", inline=False)
             help_embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/7235/7235288.png")
-            help_embed.set_footer(
-                text=f"{config.BOT_NAME} v{config.BOT_VERSION} | By {self.bot.get_user(config.OWNER_ID).name}",
-                icon_url=self.bot.user.avatar.url
-            )
             await ctx.send(embed=help_embed)
 
         except Exception as e:
