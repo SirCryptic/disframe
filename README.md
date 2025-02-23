@@ -19,10 +19,10 @@ DisFrame is a flexible, extensible Discord bot built with Python and `discord.py
 - **Modular Design**: Add commands via Python cogs in the `cmds` directory.
 - **Role-Based Access**: Permissions for `owner`, `dev`, `mod`, `bot user`, and `subscriber` roles.
 - **Dynamic Management**: Load, unload, and reload commands without restarts.
-- **Moderation Tools**: Kick, ban, mute, warn, and log server events.
-- **User Engagement**: Memes, translations, profiles, and reaction roles.
-- **Subscription System**: Manage private channels and DM access for subscribers.
-- **Logging**: Detailed server activity logs with configurable channels.
+- **Moderation Tools**: Kick, ban, mute, warn,automod and log server events.
+- **User Engagement**: Memes, translations, profiles, and role reaction.
+- **Subscription System**: Manage private channels and DM access for subscribers (beta).
+- **Logging**: Detailed server activity logs with configurable channel.
 
 ### Requirements
 
