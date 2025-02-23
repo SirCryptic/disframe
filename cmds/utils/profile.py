@@ -39,7 +39,7 @@ class ProfileCog(commands.Cog):
             embed = discord.Embed(
                 title=f"👤 Profile: {user.name}#{user.discriminator}",
                 description="━━━━━━━━━━━━━━━━━━━━━━━",
-                color=user.color if is_member and user.color != discord.Color.default() else discord.Color.blue(),
+                color=user.color if is_member and user.color != discord.Color.default() else discord.Color.(),
                 timestamp=datetime.utcnow()
             )
 
