@@ -11,7 +11,9 @@ class RoleReaction(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.BOT_USER_ROLE = config.BOT_USER_ROLE
-        self.data_file = "role_reaction_data.json"
+        self.data_dir = "data"
+        os.makedirs(self.data_dir, exist_ok=True)  # Ensure data folder exists
+        self.data_file = os.path.join(self.data_dir, "role_reaction_data.json")
         self.load_data()
 
     def load_data(self):
@@ -257,6 +259,7 @@ class RoleReaction(commands.Cog):
             guild_id = str(ctx.guild.id)
             self.data[guild_id] = {
                 "message_id": reaction_msg.id,
+                "channel_id": ctx.channel.id,  # Added for better tracking
                 "roles": roles_with_emojis
             }
             self.save_data()
@@ -302,7 +305,8 @@ class RoleReaction(commands.Cog):
             return
 
         message_id = self.data[guild_id]["message_id"]
-        channel = ctx.channel
+        channel_id = self.data[guild_id].get("channel_id")  # Use stored channel ID
+        channel = self.bot.get_channel(channel_id) or ctx.channel  # Fallback to current channel if not found
         try:
             message = await channel.fetch_message(message_id)
             await message.delete()
@@ -351,7 +355,7 @@ class RoleReaction(commands.Cog):
                         timestamp=discord.utils.utcnow()
                     ))
                 except discord.Forbidden:
-                    print(f"[ERROR] Failed to assign role {role_name} to {member}: Insufficient permissions")
+                    pass  # Silently fail if bot lacks permissions
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload):
@@ -382,7 +386,7 @@ class RoleReaction(commands.Cog):
                         timestamp=discord.utils.utcnow()
                     ))
                 except discord.Forbidden:
-                    print(f"[ERROR] Failed to remove role {role_name} from {member}: Insufficient permissions")
+                    pass  # Silently fail if bot lacks permissions
 
 async def setup(bot):
     await bot.add_cog(RoleReaction(bot))
