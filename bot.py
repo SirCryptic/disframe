@@ -24,23 +24,28 @@ bot_locked = False
 SUBSCRIPTION_IDS = []
 
 def load_subscription_ids():
-    """Load subscription IDs from config.json."""
+    """Load subscription IDs from data/subscription_ids.json."""
     global SUBSCRIPTION_IDS
-    if os.path.exists("config.json"):
-        with open("config.json", "r") as f:
+    data_dir = "data"
+    os.makedirs(data_dir, exist_ok=True)  # Ensure data folder exists
+    subscription_file = os.path.join(data_dir, "subscription_ids.json")
+    if os.path.exists(subscription_file):
+        with open(subscription_file, "r") as f:
             try:
                 data = json.load(f)
                 SUBSCRIPTION_IDS = data.get("SUBSCRIPTION_IDS", [])
             except json.JSONDecodeError:
-                print("[ERROR] Failed to load config.json; using empty subscription list.")
                 SUBSCRIPTION_IDS = []
     else:
         SUBSCRIPTION_IDS = []
 
 def save_subscription_ids():
-    """Save subscription IDs to config.json."""
+    """Save subscription IDs to data/subscription_ids.json."""
+    data_dir = "data"
+    os.makedirs(data_dir, exist_ok=True)  # Ensure data folder exists
+    subscription_file = os.path.join(data_dir, "subscription_ids.json")
     data = {"SUBSCRIPTION_IDS": SUBSCRIPTION_IDS}
-    with open("config.json", "w") as f:
+    with open(subscription_file, "w") as f:
         json.dump(data, f, indent=4)
 
 def get_total_member_count():
@@ -73,8 +78,8 @@ async def change_status():
                 await asyncio.sleep(60)
                 break
             await asyncio.sleep(60)
-    except Exception as e:
-        print(f"[ERROR] Failed to update status: {e}")
+    except Exception:
+        pass
 
 async def ensure_roles_exist(guild):
     """Ensure required roles exist in the guild."""
@@ -85,9 +90,8 @@ async def ensure_roles_exist(guild):
         if role_name not in existing_roles:
             try:
                 await guild.create_role(name=role_name, reason="Required role for bot functionality")
-                print(f"[INFO] Created role: {role_name} in {guild.name}")
             except discord.Forbidden:
-                print(f"[ERROR] Failed to create role {role_name} in {guild.name}: Insufficient permissions")
+                pass
 
 async def create_subscription_channel(guild):
     """Create a private subscription channel if it doesn’t exist."""
@@ -101,47 +105,70 @@ async def create_subscription_channel(guild):
         }
         try:
             channel = await guild.create_text_channel(channel_name, overwrites=overwrites, reason="Subscription channel")
-            print(f"[INFO] Created private 'subscriptions' channel in {guild.name}")
             return channel
         except discord.Forbidden:
-            print(f"[ERROR] Failed to create subscription channel in {guild.name}: Insufficient permissions")
             return None
     return existing_channel
 
 async def load_commands():
     """Recursively load command files from cmds/ and subdirectories."""
+    loaded_cogs = 0
     for root, _, files in os.walk("cmds"):
         for file in files:
             if file.endswith(".py") and not file.startswith("__"):
                 module_name = os.path.join(root, file).replace(os.sep, ".")[:-3]
                 try:
                     load_task = bot.load_extension(module_name)
-                    if load_task is not None:  # Ensure load_extension returns an awaitable
+                    if load_task is not None:
                         await load_task
-                    print(f"[INFO] Loaded: {module_name}")
-                except Exception as e:
-                    print(f"[ERROR] Failed to load {module_name}: {e}")
+                    loaded_cogs += 1
+                except Exception:
+                    pass
+    print(f"[INFO] Loaded {loaded_cogs} cog(s)")
 
 @bot.event
 async def on_ready():
     """Handle bot startup."""
-    print(f"[INFO] Logged in as {bot.user} ({bot.user.id}) on {len(bot.guilds)} guild(s) with {bot.shard_count or 1} shard(s).")
-    print("[INFO] Initializing roles and commands...")
-
+    guilds = len(bot.guilds)
+    members = get_total_member_count()
+    shards = bot.shard_count or 1
+    print(f"[INFO] Logged in as {bot.user} ({bot.user.id}) on {guilds} guild(s) with {shards} shard(s) and {members} members")
     for guild in bot.guilds:
         await ensure_roles_exist(guild)
-        channel = await create_subscription_channel(guild)
-        if channel is None:
-            print(f"[WARNING] Subscription channel creation failed in {guild.name}")
+        await create_subscription_channel(guild)
 
     bot.remove_command("help")
-    print("[INFO] Loading commands...")
     await load_commands()
-
     load_subscription_ids()
-    print("[INFO] Bot is ready!")
+    print(f"[INFO] {bot.user} is ready!")
     if not change_status.is_running():
         change_status.start()
+
+@bot.event
+async def on_message(message):
+    """Handle incoming messages, including DM checks."""
+    if message.author.bot:
+        return
+
+    # Handle DMs
+    if not message.guild and not ALLOWED_DM:
+        if message.author.id not in [OWNER_ID] + DEV_IDS + SUBSCRIPTION_IDS:
+            embed = discord.Embed(
+                title="❌ DMs Not Supported",
+                description=f"I can’t process commands in DMs.\nJoin my server: [Click here]({SERVER_INVITE_LINK})\nUse `{BOT_PREFIX}help` there for commands.",
+                color=discord.Color.red(),
+                timestamp=datetime.now(UTC)
+            )
+            embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/12724/12724695.png")
+            embed.set_footer(text=f"{BOT_NAME} v{BOT_VERSION}")
+            try:
+                await message.author.send(embed=embed)
+            except discord.Forbidden:
+                pass
+            return
+
+    # Process commands
+    await bot.process_commands(message)
 
 # Lock & Unlock Commands
 @bot.command(name="lock")
@@ -222,30 +249,6 @@ async def global_check(ctx):
     return True
 
 @bot.event
-async def on_message(message):
-    """Handle incoming messages, including DM checks."""
-    if message.author.bot:
-        return
-
-    if not message.guild and not ALLOWED_DM:
-        if message.author.id not in [OWNER_ID] + DEV_IDS + SUBSCRIPTION_IDS:
-            embed = discord.Embed(
-                title="❌ DMs Not Supported",
-                description=f"I can’t process commands in DMs.\nJoin my server: [Click here]({SERVER_INVITE_LINK})\nUse `{BOT_PREFIX}help` there for commands.",
-                color=discord.Color.red(),
-                timestamp=datetime.now(UTC)
-            )
-            embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/12724/12724695.png")
-            embed.set_footer(text=f"{BOT_NAME} v{BOT_VERSION}")
-            try:
-                await message.author.send(embed=embed)
-            except discord.Forbidden:
-                print(f"[WARNING] Could not send DM to {message.author} (DMs disabled)")
-            return
-
-    await bot.process_commands(message)
-
-@bot.event
 async def on_command_error(ctx, error):
     """Global error handler for all commands."""
     embed = discord.Embed(
@@ -288,13 +291,11 @@ async def on_command_error(ctx, error):
         await error_message.delete()
     except discord.Forbidden:
         pass
-    print(f"[ERROR] Command error in {ctx.command}: {error}")
 
 # Subscription Role Management Commands
 @bot.command(name="add_subscription")
 @commands.check(lambda ctx: ctx.author.id == OWNER_ID or ctx.author.id in DEV_IDS)
 async def add_subscription(ctx, user_id: int = None):
-    """Add a user ID to the Subscription role."""
     if user_id is None:
         embed = discord.Embed(
             title="📝 Add Subscription",
@@ -352,8 +353,7 @@ async def add_subscription(ctx, user_id: int = None):
 
 @bot.command(name="remove_subscription")
 @commands.check(lambda ctx: ctx.author.id == OWNER_ID or ctx.author.id in DEV_IDS)
-async def remove_subscription(ctx, user_id: int = None):
-    """Remove a user ID from the Subscription role."""
+async def remove_subscription(ctx, user_id: str = None):
     if user_id is None:
         embed = discord.Embed(
             title="📝 Remove Subscription",
@@ -366,12 +366,29 @@ async def remove_subscription(ctx, user_id: int = None):
         await ctx.send(embed=embed)
         return
 
-    if user_id in SUBSCRIPTION_IDS:
-        SUBSCRIPTION_IDS.remove(user_id)
+    # Handle mentions or raw input
+    try:
+        if user_id.startswith('<@') and user_id.endswith('>'):
+            user_id = user_id[2:-1].replace('!', '')  # Extract ID from <@user_id> or <@!user_id>
+        user_id_int = int(user_id)
+    except ValueError:
+        embed = discord.Embed(
+            title="❌ Invalid User ID",
+            description="Please provide a valid numeric user ID (e.g., `1234567890`) or a mention (e.g., `@user`).",
+            color=discord.Color.red(),
+            timestamp=datetime.now(UTC)
+        )
+        embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/12724/12724695.png")
+        embed.set_footer(text=f"{BOT_NAME} v{BOT_VERSION}")
+        await ctx.send(embed=embed)
+        return
+
+    if user_id_int in SUBSCRIPTION_IDS:
+        SUBSCRIPTION_IDS.remove(user_id_int)
         save_subscription_ids()
         removed = False
         for guild in bot.guilds:
-            member = guild.get_member(user_id)
+            member = guild.get_member(user_id_int)
             if member:
                 role = discord.utils.get(guild.roles, name=SUBSCRIPTION_ROLE)
                 if role:
@@ -393,14 +410,14 @@ async def remove_subscription(ctx, user_id: int = None):
 
         embed = discord.Embed(
             title="✅ Subscription Removed",
-            description=f"User ID `{user_id}` removed from subscriptions{' and ' + SUBSCRIPTION_ROLE + ' role removed' if removed else ', but not found in any guild'}.",
+            description=f"User ID `{user_id_int}` removed from subscriptions{' and ' + SUBSCRIPTION_ROLE + ' role removed' if removed else ', but not found in any guild'}.",
             color=discord.Color.green() if removed else discord.Color.orange(),
             timestamp=datetime.now(UTC)
         )
     else:
         embed = discord.Embed(
             title="❌ Not Subscribed",
-            description=f"User ID `{user_id}` is not in the subscription list.",
+            description=f"User ID `{user_id_int}` is not in the subscription list.",
             color=discord.Color.red(),
             timestamp=datetime.now(UTC)
         )
@@ -410,7 +427,6 @@ async def remove_subscription(ctx, user_id: int = None):
 
 @bot.command(name="check_subscription")
 async def check_subscription(ctx, user_id: int = None):
-    """Check if a user is subscribed."""
     user_id = user_id or ctx.author.id
     embed = discord.Embed(
         title="📋 Subscription Status",
