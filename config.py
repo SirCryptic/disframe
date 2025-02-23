@@ -20,7 +20,7 @@ SERVER_INVITE_LINK = "https://discord.gg/invite"
 ALLOWED_DM = False
 
 # Bot Version (you can change this to the version of your bot).
-BOT_VERSION = "1.0.5"  # Example version.
+BOT_VERSION = "1.0.6"  # Example version.
 BOT_NAME = "DisFrame"  # Replace this with your actual bot name.
 
 OWNER_ID = 1231241232312345  # Replace this with your actual Discord User ID.
