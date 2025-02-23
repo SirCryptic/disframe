@@ -169,8 +169,8 @@ OWNER_ID = your_discord_user_id_here
 
 ### **dev**
 - **Access**: Unrestricted access to most commands (e.g., lock and unlock the bot).
-- **Exclusions**: Users with this role are **excluded** from accessing the `adminhelp` page or any admin-specific commands.
-- **Usage**: This role is typically granted to trusted users who need to manage and configure the bot, but without the ability to access sensitive administrative help commands.
+- **Exclusions**: **NONE**
+- **Usage**: This role is typically granted to trusted users who need to manage and configure the bot.
 
 ### **mod**
 - **Access**: Moderators with this role have access to certain commands that help manage the server, such as clearing messages or enforcing server rules.
@@ -190,7 +190,7 @@ OWNER_ID = your_discord_user_id_here
 
 ### Commands
 * General: -info, -serverinfo, -profile, -translate, -meme
-* Moderation: -kick, -ban, -mute, -warn, -setlogchannel + More!
+* Moderation: -kick, -ban, -mute, -warn, -automod + More!
 * Admin: -lock, -unlock, -load, -reload, -eval (dev/owner only) + More!
 * Fun: -meme (use memehelp to setup guild features), -setuprolereaction
 * Help: -help for a paginated menu
