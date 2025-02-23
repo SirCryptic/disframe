@@ -22,7 +22,7 @@ DisFrame is a flexible, extensible Discord bot built with Python and `discord.py
 - **Moderation Tools**: Kick, ban, mute, warn,automod and log server events.
 - **User Engagement**: Memes, translations, profiles, and role reaction.
 - **Subscription System**: Manage private channels and DM access for subscribers (beta).
-- **Logging**: Detailed server activity logs with configurable channel.
+- **Multi-Guild**: Features can now be setup across multiple discord guilds eg: enabling nsfw memes and auto-moderation.
 
 ### Requirements
 
