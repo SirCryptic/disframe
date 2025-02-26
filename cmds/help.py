@@ -11,7 +11,6 @@ class Help(commands.Cog):
     @commands.command(name="help")
     async def custom_help(self, ctx):
         """Display the help menu with organized sections and buttons for pagination."""
-        
         owner = await self.bot.fetch_user(config.OWNER_ID)  # Fetch bot owner dynamically
         footer_text = f"{config.BOT_NAME} - v{config.BOT_VERSION} - Developed by {owner.name}"
 
@@ -21,11 +20,13 @@ class Help(commands.Cog):
             description="The following commands are available for everyone:",
             color=discord.Color.blue(),
         )
-        general_embed.add_field(name=f"```{config.BOT_PREFIX}example```", value="An example command.", inline=False)
         general_embed.add_field(name=f"```{config.BOT_PREFIX}translate <LANGUAGE_CODE> <TEXT>```", value="Translate a message into another language using Google Translate.", inline=False)
         general_embed.add_field(name=f"```{config.BOT_PREFIX}bug```", value="Report a bug to the Developers.", inline=False)
         general_embed.add_field(name=f"```{config.BOT_PREFIX}info```", value="Displays Information About The Bot.", inline=False)
         general_embed.add_field(name=f"```{config.BOT_PREFIX}serverinfo```", value="Displays Information About The Server.", inline=False)
+        general_embed.add_field(name=f"```{config.BOT_PREFIX}profile <@/ID>```", value="Fetch profile information of a Discord user.", inline=False)
+        general_embed.add_field(name=f"```{config.BOT_PREFIX}avatar <@/ID>```", value="Display your own or another Discord user's avatar.", inline=False)
+        general_embed.add_field(name=f"```{config.BOT_PREFIX}status```", value="Check the bot's lock and DM status.", inline=False)
         general_embed.set_footer(
             text=footer_text,
             icon_url=self.bot.user.avatar.url
@@ -38,6 +39,7 @@ class Help(commands.Cog):
             color=discord.Color.blue(),
         )
         fun_embed.add_field(name=f"```{config.BOT_PREFIX}meme```", value="Generate a random meme.", inline=False)
+        fun_embed.add_field(name=f"```{config.BOT_PREFIX}creatememe```", value="Create your own custom meme.", inline=False)
         fun_embed.set_footer(
             text=footer_text,
             icon_url=self.bot.user.avatar.url
@@ -58,6 +60,7 @@ class Help(commands.Cog):
                 )
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}lock```", value="Lock the bot to dev users only.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}unlock```", value="Unlock the bot to all users.", inline=False)
+                dev_embed.add_field(name=f"```{config.BOT_PREFIX}toggle_dm```", value="Toggle DM allowance for non-privileged users.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}adminhelp```", value="List full available commands.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}bugreportenable```", value="Enable bug reporting.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}bugreportdisable```", value="Disable bug reporting.", inline=False)
@@ -78,12 +81,13 @@ class Help(commands.Cog):
             if config.MOD_ROLE.lower() in user_roles or ctx.author.guild_permissions.manage_messages or ctx.author.id == config.OWNER_ID or ctx.author.id in config.DEV_IDS:
                 mod_embed = discord.Embed(
                     title="Help Menu - Mod Commands",
-                    description="The following commands are available for moderators:",
+                    description="The following commands are available for moderators and admins:",
                     color=discord.Color.blue(),
                 )
                 mod_embed.add_field(name=f"```{config.BOT_PREFIX}modhelp```", value="Lists available moderation commands.", inline=False)
                 mod_embed.add_field(name=f"```{config.BOT_PREFIX}automod```", value="Configure auto-moderation settings, including log channel setup.", inline=False)
                 mod_embed.add_field(name=f"```{config.BOT_PREFIX}setuprolereaction```", value="Set up role reactions in your desired channel. [Requires Manage Guild]", inline=False)
+                mod_embed.add_field(name=f"```{config.BOT_PREFIX}setup```", value="Set up guild roles (e.g., Bot User, Moderator). [Requires Administrator]", inline=False)
                 mod_embed.set_footer(
                     text=footer_text,
                     icon_url=self.bot.user.avatar.url
@@ -99,11 +103,12 @@ class Help(commands.Cog):
                 )
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}lock```", value="Lock the bot to dev users only.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}unlock```", value="Unlock the bot to all users.", inline=False)
+                dev_embed.add_field(name=f"```{config.BOT_PREFIX}toggle_dm```", value="Toggle DM allowance for non-privileged users.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}adminhelp```", value="List full available commands.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}bugreportenable```", value="Enable bug reporting.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}bugreportdisable```", value="Disable bug reporting.", inline=False)
-                dev_embed.add_field(name=f"```{config.BOT_PREFIX}add_subscription <user_id>```", value="Add a user to the subscription list.", inline=False)
-                dev_embed.add_field(name=f"```{config.BOT_PREFIX}remove_subscription <user_id>```", value="Remove a user from the subscription list.", inline=False)
+                dev_embed.add_field(name=f"```{config.BOT_PREFIX}add_subscription <user_id|@>```", value="Add a user to the subscription list.", inline=False)
+                dev_embed.add_field(name=f"```{config.BOT_PREFIX}remove_subscription <user_id|@>```", value="Remove a user from the subscription list.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}check_subscription [user_id|@]```", value="Check if a user (or yourself if no ID or @) is subscribed.", inline=False)
                 dev_embed.set_footer(
                     text=footer_text,
