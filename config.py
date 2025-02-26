@@ -12,9 +12,6 @@ TIMEOUT_ROLE_NAME = "Muted"
 # Server link (change this to your own server's invite link)
 SERVER_INVITE_LINK = "https://discord.gg/invite"
 
-# Set to True if you want to allow anyone to DM the bot, False if you don't ( the bots activity status will update accordingly based on this setting eg dms enabled & dms disabled same with locking the bot eg:bot locked)
-ALLOWED_DM = False
-
 # Bot Version (you can change this to the version of your bot).
 BOT_VERSION = "1.0.7"  # Example version.
 BOT_NAME = "DisFrame"  # Replace this with your actual bot name.
