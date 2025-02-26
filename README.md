@@ -7,6 +7,9 @@
 <p align="center">
   <a href="https://github.com/sircryptic/disframe/stargazers"><img src="https://img.shields.io/github/stars/sircryptic/disframe.svg" alt="GitHub stars"></a>
   <a href="https://github.com/sircryptic/disframe/network"><img src="https://img.shields.io/github/forks/sircryptic/disframe.svg" alt="GitHub forks"></a>
+  <a href="https://github.com/sircryptic/disframe/watchers"><img src="https://img.shields.io/github/watchers/sircryptic/disframe.svg" alt="GitHub watchers"></a>
+      <br>
+    <a href="https://github.com/SirCryptic/exifmapper/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License"></a>
 </p>
 
 # DisFrame: A Modular Discord Bot Framework
