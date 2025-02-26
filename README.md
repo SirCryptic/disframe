@@ -11,23 +11,23 @@
 
 # DisFrame: A Modular Discord Bot Framework
 
-DisFrame is a versatile, extensible Discord bot built with Python and `discord.py`, designed to enhance community management and user engagement. Its modular cog system enables effortless customization, making it adaptable for moderation, administration, and interactive fun across multiple guilds.
+DisFrame is a versatile, extensible Discord bot framework built with Python and `discord.py`, designed to streamline community management and enhance user engagement. Its modular cog system allows for effortless customization, making it ideal for moderation, administration, and interactive fun across multiple guilds.
 
 ## Key Features
 
 - **Modular Design**: Extend functionality by adding Python cogs to the `cmds` directory.
-- **Role-Based Permissions**: Granular access control for `owner`, `dev`, `mod`, `bot user`, `subscriber`, and `everyone` roles.
+- **Role-Based Permissions**: Granular access for `owner`, `dev`, `mod`, `bot user`, `subscriber`, and `everyone` roles.
 - **Dynamic Command Management**: Load, unload, and reload commands without restarting the bot.
-- **Comprehensive Moderation**: Tools like kick, ban, mute, warn, auto-moderation, and event logging.
-- **Engaging Interactions**: Features including memes, custom meme creation, translations, and user profiles.
+- **Comprehensive Moderation**: Tools including kick, ban, mute, warn, auto-moderation, and guild setup.
+- **Engaging Interactions**: Features like memes, custom meme creation, translations, and user profiles.
 - **Subscription System**: Exclusive channel access and DM privileges for subscribers (beta).
-- **Multi-Guild Flexibility**: Configure settings (e.g., NSFW memes, auto-moderation) per guild.
-- **Persistent Settings**: Bot lock and DM allowance states saved to JSON for continuity across restarts.
+- **Multi-Guild Flexibility**: Per-guild settings for features like NSFW memes or moderation rules.
+- **Persistent Settings**: Bot lock and DM allowance states preserved via JSON across restarts.
 
 ## Requirements
 
 - Python 3.8 or higher
-- Required libraries: See `requirements.txt`
+- Required libraries: See `requirements.txt` for details
 - A valid Discord bot token
 
 ## Installation
@@ -36,37 +36,33 @@ DisFrame is a versatile, extensible Discord bot built with Python and `discord.p
 Clone the DisFrame repository to your local machine and navigate into the project directory.
 
 ### 2. Install Dependencies
-Set up a virtual environment (recommended) and install the required dependencies listed in `requirements.txt`.
+Set up a virtual environment (recommended) and install the dependencies listed in `requirements.txt`.
 
 ### 3. Create a `.env` File
-Create a `.env` file in the root directory to securely store your Discord bot token. DisFrame uses this file to load sensitive information.
+Create a `.env` file in the root directory to securely store your Discord bot token, obtained from the [Discord Developer Portal](https://discord.com/developers/applications).
 
-Add the following line to `.env`, replacing `your_bot_token_here` with your actual Discord bot token:
-```
-TOKEN=your_bot_token_here
-```
 ### 4. Configure Bot Settings
-Edit the `config.py` file in the root directory to define role names, owner ID, and other settings (e.g., `MOD_ROLE`, `OWNER_ID`). Replace placeholders with your specific values. The bot token is managed via `.env`, not `config.py`.
+Edit `config.py` to set role names (e.g., `MOD_ROLE`), owner ID (`OWNER_ID`), and other configurations. The token is handled via `.env`.
 
 ### 5. Run the Bot
-Launch the bot with Python. It will read the token from `.env`, log in, and begin processing commands.
+Launch the bot with Python. It will load the token from `.env`, log in, and begin processing commands.
 
 ## Adding Commands
 
-Add new commands by creating Python files (cogs) in the `cmds` directory. DisFrame automatically loads these on startup. Use role-based checks to restrict access, ensuring role names match those in `config.py` (e.g., `MOD_ROLE = "mod"`). Dynamically manage commands using built-in load, unload, and reload features.
+Add new commands by placing Python cog files in the `cmds` directory. DisFrame loads these automatically on startup. Use role-based checks to restrict access, matching role names in `config.py` (e.g., `MOD_ROLE = "mod"`). Manage commands dynamically with `-load`, `-unload`, and `-reload`.
 
 ## Bot Permissions
 
 ### Owner
-- **Access**: Full control, including direct DM interaction for management tasks (e.g., reloading commands).
-- **Setup**: Set `OWNER_ID` in `config.py` to your Discord User ID.
+- **Access**: Full control, including DM management tasks (e.g., reloading commands).
+- **Setup**: Define `OWNER_ID` in `config.py` with your Discord User ID.
 
 ### Dev
-- **Access**: Near-unrestricted command access (e.g., locking/unlocking, subscription management).
+- **Access**: Near-unrestricted command access (e.g., locking, subscription management).
 - **Usage**: For trusted developers configuring the bot.
 
 ### Mod
-- **Access**: Moderation commands (e.g., kick, ban) and guild setup tools (e.g., `-setup`).
+- **Access**: Moderation tools (e.g., kick, ban) and guild setup (e.g., `-setup`).
 - **Usage**: For server moderators and administrators.
 
 ### Bot User
@@ -74,12 +70,12 @@ Add new commands by creating Python files (cogs) in the `cmds` directory. DisFra
 - **Usage**: For bots or users with minimal privileges.
 
 ### Everyone
-- **Access**: Limited to essential, public-facing commands.
-- **Usage**: Default role for all server members without special permissions.
+- **Access**: Essential, public-facing commands only.
+- **Usage**: Default for all server members without special roles.
 
 ### Subscriber
-- **Access**: Exclusive channel access and DM privileges, even when globally disabled.
-- **Usage**: For users subscribed to premium features (beta).
+- **Access**: Exclusive channels and DM privileges, even when globally disabled.
+- **Usage**: For premium subscribers (beta).
 
 ## Commands
 
@@ -87,17 +83,17 @@ Add new commands by creating Python files (cogs) in the `cmds` directory. DisFra
 - **Moderation**: `-kick`, `-ban`, `-mute`, `-warn`, `-automod`, `-setuprolereaction`, `-setup`
 - **Admin/Dev**: `-lock`, `-unlock`, `-toggle_dm`, `-load`, `-reload`, `-add_subscription`, `-remove_subscription`
 - **Fun**: `-meme`, `-creatememe`
-- **Games**: Explore examples in the [community cog repo](https://github.com/SirCryptic/disframe-cogs/tree/main) (e.g., CoinRush, Space Miner, Guess)
+- **Games**: See examples in the [community cogs repo](https://github.com/SirCryptic/disframe-cogs) (e.g., CoinRush, Space Miner)
 - **Help**: `-help` for an interactive, paginated menu
 
 ## Contributing
 
-Contributions are welcome! Fork the repository, implement features or fixes, and submit a pull request. For suggestions or bug reports, open an issue on the GitHub repository.
+I welcome contributions! Fork the repository, add features or fixes, and submit a pull request. For ideas or issues, open a ticket on the [GitHub repository](https://github.com/sircryptic/disframe/issues).
 
 ## License
 
-See the [LICENSE](https://github.com/SirCryptic/disframe/blob/main/LICENSE) file for details.
+DisFrame is licensed under the [MIT License](LICENSE) (Copyright © 2025 SirCryptic), allowing free use, modification, and distribution with attribution.
 
 ## Support
 
-Need help or found an issue? Open an issue on the [GitHub repository](https://github.com/sircryptic/disframe/issues) for assistance from the community or maintainers.
+Need assistance or found a bug? Visit the [GitHub issues page](https://github.com/sircryptic/disframe/issues) or join our [DisFrame Discord](https://discord.gg/48JH3UkerX).
