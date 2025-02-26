@@ -71,7 +71,7 @@ def save_settings():
     except IOError as e:
         logger.error(f"Failed to save settings: {e}")
 
-# Subscription IDs 
+# Subscription IDs
 class SubscriptionManager:
     def __init__(self, file_path="data/subscription_ids.json"):
         self.file_path = file_path
@@ -404,6 +404,8 @@ async def on_command_error(ctx, error):
         embed.add_field(name="Tip", value=f"Use `{BOT_PREFIX}help {ctx.command}` for details.", inline=False)
     elif isinstance(error, commands.CommandNotFound):
         embed.title, embed.description, embed.color = "❌ Command Not Found", f"Command not recognized. Use `{BOT_PREFIX}help`.", discord.Color.orange()
+    elif isinstance(error, commands.CommandOnCooldown):
+        embed.title, embed.description, embed.color = "⏳ Command on Cooldown", f"You are on cooldown. Try again in {int(error.retry_after)} seconds.", discord.Color.orange()
     elif isinstance(error, commands.CommandInvokeError):
         embed.title, embed.description = "❌ Command Error", f"An error occurred while running `{ctx.command}`."
         embed.add_field(name="Details", value=str(error.original)[:1000], inline=False)
@@ -488,7 +490,7 @@ async def remove_subscription(ctx, user_id: str = None):
             embed.title, embed.description, embed.color = "❌ Invalid User ID", "Please provide a valid numeric user ID or mention.", discord.Color.red()
     await ctx.send(embed=embed)
 
-@bot.command(name="check subscription", aliases=["check_subscription"])
+@bot.command(name="check_subscription")
 async def check_subscription(ctx, user_id: int = None):
     """Check subscription status of a user."""
     user_id = user_id or ctx.author.id
