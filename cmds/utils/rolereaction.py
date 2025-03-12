@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import config
+import sqlite3
 import json
 import os
 import asyncio
@@ -13,24 +14,56 @@ class RoleReaction(commands.Cog):
         self.BOT_USER_ROLE = config.BOT_USER_ROLE
         self.data_dir = "data"
         os.makedirs(self.data_dir, exist_ok=True)  # Ensure data folder exists
-        self.data_file = os.path.join(self.data_dir, "role_reaction_data.json")
-        self.load_data()
+        self.db_file = os.path.join(self.data_dir, "role_reaction_data.db")
+        self.setup_database()
+        self.data = self.load_data()
+
+    def setup_database(self):
+        """Create the SQLite database and table if they don't exist."""
+        with sqlite3.connect(self.db_file) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS role_reactions (
+                    guild_id TEXT PRIMARY KEY,
+                    message_id INTEGER,
+                    channel_id INTEGER,
+                    roles TEXT DEFAULT '{}'  -- Stored as JSON string
+                )
+            """)
+            conn.commit()
 
     def load_data(self):
-        """Load the role reaction data from JSON file."""
-        if os.path.exists(self.data_file):
-            with open(self.data_file, "r") as f:
-                try:
-                    self.data = json.load(f)
-                except json.JSONDecodeError:
-                    self.data = {}
-        else:
-            self.data = {}
+        """Load the role reaction data from the SQLite database."""
+        data = {}
+        with sqlite3.connect(self.db_file) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT guild_id, message_id, channel_id, roles FROM role_reactions")
+            rows = cursor.fetchall()
+            for row in rows:
+                guild_id, message_id, channel_id, roles_json = row
+                data[guild_id] = {
+                    "message_id": message_id,
+                    "channel_id": channel_id,
+                    "roles": json.loads(roles_json)
+                }
+        return data
 
     def save_data(self):
-        """Save the role reaction data to JSON file."""
-        with open(self.data_file, "w") as f:
-            json.dump(self.data, f, indent=4)
+        """Save the role reaction data to the SQLite database."""
+        with sqlite3.connect(self.db_file) as conn:
+            cursor = conn.cursor()
+            for guild_id, guild_data in self.data.items():
+                cursor.execute("""
+                    INSERT OR REPLACE INTO role_reactions (
+                        guild_id, message_id, channel_id, roles
+                    ) VALUES (?, ?, ?, ?)
+                """, (
+                    guild_id,
+                    guild_data["message_id"],
+                    guild_data["channel_id"],
+                    json.dumps(guild_data["roles"])
+                ))
+            conn.commit()
 
     def create_reaction_embed(self, roles):
         """Create an embed for the role reaction message with bot's avatar."""
@@ -62,7 +95,7 @@ class RoleReaction(commands.Cog):
         """Create an embed for asking about roles."""
         return discord.Embed(
             title="📋 Role List",
-            description=f"List roles to include (e.g., `Role1, Role2`). Separate with commas. Mentions or names work!",
+            description="List roles to include (e.g., `Role1, Role2`). Separate with commas. Mentions or names work!",
             color=discord.Color.green(),
             timestamp=discord.utils.utcnow()
         )
@@ -259,7 +292,7 @@ class RoleReaction(commands.Cog):
             guild_id = str(ctx.guild.id)
             self.data[guild_id] = {
                 "message_id": reaction_msg.id,
-                "channel_id": ctx.channel.id,  # Added for better tracking
+                "channel_id": ctx.channel.id,
                 "roles": roles_with_emojis
             }
             self.save_data()
@@ -306,12 +339,12 @@ class RoleReaction(commands.Cog):
 
         message_id = self.data[guild_id]["message_id"]
         channel_id = self.data[guild_id].get("channel_id")  # Use stored channel ID
-        channel = self.bot.get_channel(channel_id) or ctx.channel  # Fallback to current channel if not found
+        channel = self.bot.get_channel(channel_id) or ctx.channel 
         try:
             message = await channel.fetch_message(message_id)
             await message.delete()
         except (discord.NotFound, discord.Forbidden):
-            pass  # Message already deleted or bot lacks permission
+            pass 
 
         del self.data[guild_id]
         self.save_data()
