@@ -1,6 +1,6 @@
 import discord
 
-BOT_PREFIX = "!"
+BOT_PREFIX = "-"
 
 DEV_ROLE = "dev"
 BOT_USER_ROLE = "bot user"
