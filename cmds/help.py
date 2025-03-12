@@ -20,13 +20,13 @@ class Help(commands.Cog):
             description="The following commands are available for everyone:",
             color=discord.Color.blue(),
         )
+        general_embed.add_field(name=f"```{config.BOT_PREFIX}weather <CITY/COUNTRY>```", value="Get the weather for a specific country / city using openweathermap.", inline=False)
         general_embed.add_field(name=f"```{config.BOT_PREFIX}translate <LANGUAGE_CODE> <TEXT>```", value="Translate a message into another language using Google Translate.", inline=False)
         general_embed.add_field(name=f"```{config.BOT_PREFIX}bug```", value="Report a bug to the Developers.", inline=False)
         general_embed.add_field(name=f"```{config.BOT_PREFIX}info```", value="Displays Information About The Bot.", inline=False)
         general_embed.add_field(name=f"```{config.BOT_PREFIX}serverinfo```", value="Displays Information About The Server.", inline=False)
         general_embed.add_field(name=f"```{config.BOT_PREFIX}profile <@/ID>```", value="Fetch profile information of a Discord user.", inline=False)
         general_embed.add_field(name=f"```{config.BOT_PREFIX}avatar <@/ID>```", value="Display your own or another Discord user's avatar.", inline=False)
-        general_embed.add_field(name=f"```{config.BOT_PREFIX}status```", value="Check the bot's lock and DM status.", inline=False)
         general_embed.set_footer(
             text=footer_text,
             icon_url=self.bot.user.avatar.url
@@ -40,13 +40,35 @@ class Help(commands.Cog):
         )
         fun_embed.add_field(name=f"```{config.BOT_PREFIX}meme```", value="Generate a random meme.", inline=False)
         fun_embed.add_field(name=f"```{config.BOT_PREFIX}creatememe```", value="Create your own custom meme.", inline=False)
+        fun_embed.add_field(name=f"```{config.BOT_PREFIX}avacreate```", value="Create Your Own Avatar!.", inline=False)
         fun_embed.set_footer(
             text=footer_text,
             icon_url=self.bot.user.avatar.url
         )
 
+        # Games Help Page (Visible to everyone)
+        games_embed = discord.Embed(
+            title="Help Menu - Games",
+            description="The following game commands are available for everyone:",
+            color=discord.Color.blue(),
+        )
+        games_embed.add_field(
+            name=f"```{config.BOT_PREFIX}coinhelp``` or ```{config.BOT_PREFIX}coin```",
+            value="CoinRush: An economy game with jobs, coins, items, trading, and a casino (guild-only). Use `coinhelp` for info or `coin` for the UI.",
+            inline=False
+        )
+        games_embed.add_field(
+            name=f"```{config.BOT_PREFIX}guess```",
+            value="GuessGame: Guess a number between 1-100. Multiplayer in guild channels, solo in DMs. Start with `guess` and guess with `guess <number>`.",
+            inline=False
+        )
+        games_embed.set_footer(
+            text=footer_text,
+            icon_url=self.bot.user.avatar.url
+        )
+
         # Help pages initialization
-        help_pages = [general_embed, fun_embed]
+        help_pages = [general_embed, fun_embed, games_embed]
 
         # Handle permissions and role-based embeds
         if isinstance(ctx.channel, discord.DMChannel):
@@ -64,9 +86,8 @@ class Help(commands.Cog):
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}adminhelp```", value="List full available commands.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}bugreportenable```", value="Enable bug reporting.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}bugreportdisable```", value="Disable bug reporting.", inline=False)
-                dev_embed.add_field(name=f"```{config.BOT_PREFIX}add_subscription <user_id|@>```", value="Add a user to the subscription list.", inline=False)
-                dev_embed.add_field(name=f"```{config.BOT_PREFIX}remove_subscription <user_id|@>```", value="Remove a user from the subscription list.", inline=False)
-                dev_embed.add_field(name=f"```{config.BOT_PREFIX}check_subscription [user_id|@]```", value="Check if a user (or yourself if no ID or @) is subscribed.", inline=False)
+                dev_embed.add_field(name=f"```{config.BOT_PREFIX}subscriptions```", value="Bring Up The Subscriptions UI.", inline=False)
+                dev_embed.add_field(name=f"```{config.BOT_PREFIX}status```", value="Check the bot's lock and DM status.", inline=False)
                 dev_embed.set_footer(
                     text=footer_text,
                     icon_url=self.bot.user.avatar.url
@@ -107,9 +128,8 @@ class Help(commands.Cog):
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}adminhelp```", value="List full available commands.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}bugreportenable```", value="Enable bug reporting.", inline=False)
                 dev_embed.add_field(name=f"```{config.BOT_PREFIX}bugreportdisable```", value="Disable bug reporting.", inline=False)
-                dev_embed.add_field(name=f"```{config.BOT_PREFIX}add_subscription <user_id|@>```", value="Add a user to the subscription list.", inline=False)
-                dev_embed.add_field(name=f"```{config.BOT_PREFIX}remove_subscription <user_id|@>```", value="Remove a user from the subscription list.", inline=False)
-                dev_embed.add_field(name=f"```{config.BOT_PREFIX}check_subscription [user_id|@]```", value="Check if a user (or yourself if no ID or @) is subscribed.", inline=False)
+                dev_embed.add_field(name=f"```{config.BOT_PREFIX}subscriptions```", value="Bring Up The Subscriptions UI.", inline=False)
+                dev_embed.add_field(name=f"```{config.BOT_PREFIX}status```", value="Check the bot's lock and DM status.", inline=False)
                 dev_embed.set_footer(
                     text=footer_text,
                     icon_url=self.bot.user.avatar.url
