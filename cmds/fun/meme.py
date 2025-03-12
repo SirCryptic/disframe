@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import praw
 import config
+import sqlite3
 import json
 import os
 import random
@@ -52,29 +53,53 @@ class Meme(commands.Cog):
         }
         self.data_dir = "data"
         os.makedirs(self.data_dir, exist_ok=True)
-        self.settings_file = os.path.join(self.data_dir, "meme_settings.json")
-        self.load_settings()
+        self.db_file = os.path.join(self.data_dir, "meme_settings.db")
+        self.setup_database()
+        self.settings = self.load_settings()
+
+    def setup_database(self):
+        """Create the SQLite database and table if they don't exist."""
+        with sqlite3.connect(self.db_file) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS meme_settings (
+                    guild_id TEXT PRIMARY KEY,
+                    allow_nsfw INTEGER DEFAULT 0,
+                    allowed_channels TEXT DEFAULT '[]'  -- Stored as JSON string
+                )
+            """)
+            conn.commit()
 
     def load_settings(self):
-        """Load guild-specific settings from JSON file, fixing old formats."""
-        if os.path.exists(self.settings_file):
-            with open(self.settings_file, "r") as f:
-                try:
-                    self.settings = json.load(f)
-                    for guild_id, value in list(self.settings.items()):
-                        if isinstance(value, bool):
-                            self.settings[guild_id] = {"allow_nsfw": value, "allowed_channels": []}
-                        elif not isinstance(value, dict) or "allow_nsfw" not in value or "allowed_channels" not in value:
-                            self.settings[guild_id] = {"allow_nsfw": False, "allowed_channels": []}
-                except json.JSONDecodeError:
-                    self.settings = {}
-        else:
-            self.settings = {}
+        """Load guild-specific settings from SQLite, fixing old formats."""
+        settings = {}
+        with sqlite3.connect(self.db_file) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT guild_id, allow_nsfw, allowed_channels FROM meme_settings")
+            rows = cursor.fetchall()
+            for row in rows:
+                guild_id, allow_nsfw, allowed_channels_json = row
+                settings[guild_id] = {
+                    "allow_nsfw": bool(allow_nsfw),
+                    "allowed_channels": json.loads(allowed_channels_json)
+                }
+        return settings
 
     def save_settings(self):
-        """Save guild-specific settings to JSON file."""
-        with open(self.settings_file, "w") as f:
-            json.dump(self.settings, f, indent=4)
+        """Save guild-specific settings to SQLite."""
+        with sqlite3.connect(self.db_file) as conn:
+            cursor = conn.cursor()
+            for guild_id, data in self.settings.items():
+                cursor.execute("""
+                    INSERT OR REPLACE INTO meme_settings (
+                        guild_id, allow_nsfw, allowed_channels
+                    ) VALUES (?, ?, ?)
+                """, (
+                    guild_id,
+                    int(data["allow_nsfw"]),
+                    json.dumps(data["allowed_channels"])
+                ))
+            conn.commit()
 
     def is_nsfw_allowed(self, guild_id):
         """Check if NSFW is allowed for the given guild, defaulting to False."""
