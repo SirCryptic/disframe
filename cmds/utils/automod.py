@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands, tasks
+import sqlite3
 import json
 import os
 import asyncio
@@ -37,7 +38,6 @@ class AutoModUI(discord.ui.View):
         )
         await interaction.response.edit_message(embed=embed, view=self)
 
-    # Row 0: Core Controls
     @discord.ui.button(label="Toggle Enable", style=discord.ButtonStyle.primary, emoji="🔄", row=0)
     async def toggle_enable(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.settings["enabled"] = not self.settings["enabled"]
@@ -50,7 +50,6 @@ class AutoModUI(discord.ui.View):
         self.cog.save_settings()
         await self.update_embed(interaction)
 
-    # Row 1: Thresholds and Duration
     @discord.ui.button(label="Set Mute Threshold", style=discord.ButtonStyle.secondary, emoji="📊", row=1)
     async def set_mute_threshold(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(SetMuteThresholdModal(self))
@@ -63,7 +62,6 @@ class AutoModUI(discord.ui.View):
     async def set_duration(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(SetDurationModal(self))
 
-    # Row 2: Word Management and Logging
     @discord.ui.button(label="Add Word", style=discord.ButtonStyle.grey, emoji="➕", row=2)
     async def add_word(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(AddWordModal(self))
@@ -76,7 +74,6 @@ class AutoModUI(discord.ui.View):
     async def set_log_channel(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(SetLogChannelModal(self))
 
-    # Row 3: Clear and Finish
     @discord.ui.button(label="Clear Warnings", style=discord.ButtonStyle.red, emoji="🧹", row=3)
     async def clear_warnings(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.settings["warnings"] = []
@@ -217,68 +214,107 @@ class SetLogChannelModal(discord.ui.Modal, title="Set Logging Channel"):
 
 class AutoModeration(commands.Cog):
     DEFAULT_OFFENSIVE_WORDS = [
-    # NSFW Terms (Profanity and Sexual Content)
-    "fuck", "shit", "ass", "bitch", "damn",
-    "cock", "dick", "pussy", "cunt", "tits",
-    "asshole", "bastard", "whore", "slut", "fag",
-    "faggot", "prick", "twat", "wank", "jerkoff",
-    "blowjob", "porn", "sex", "nude", "cum",
-    "semen", "vagina", "penis", "anal", "boob",
-    "fuckboy", "shag", "bang", "screw", "nut",
-    "jizz", "clit", "boner", "horny", "thot",
-    "smut", "skank", "slut", "pimp", "dildo",
-
-    # Racial Slurs and Derogatory Terms
-    "nigger", "nigga", "coon", "spic", "chink",
-    "gook", "kike", "wetback", "jap", "paki",
-    "raghead", "cracker", "redskin", "negro", "slant",
-    "dago", "wop", "gypsy", "mick", "yid",
-    "beaner", "cholo", "zip", "oreo", "towelhead",
-    "cameljockey", "gringo", "honky", "junglebunny", "sandnigger",
-
-    # Additional Offensive Terms (Disabilities, Identities, etc.)
-    "retard", "cripple", "tranny", "dyke", "queer",
-    "homo", "sperg", "autist", "mong", "spaz",
-    "idiot", "moron", "dumbass", "shithead", "piss",
-    "lame", "freak", "weirdo", "psycho", "nutjob",
-    "fairy", "pansy", "sissy", "perv", "creep",
-
-    # Variants and Common Misspellings
-    "fuk", "sh1t", "azz", "b1tch", "d1ck",
-    "p0rn", "c0ck", "pu55y", "n1gger", "f4g",
-    "sh!t", "a$$", "b!tch", "d!ck", "p0rno",
-    "c*nt", "f*ck", "n*gga", "r*tard", "tr*nny"
+        "fuck", "shit", "ass", "bitch", "damn",
+        "cock", "dick", "pussy", "cunt", "tits",
+        "asshole", "bastard", "whore", "slut", "fag",
+        "faggot", "prick", "twat", "wank", "jerkoff",
+        "blowjob", "porn", "sex", "nude", "cum",
+        "semen", "vagina", "penis", "anal", "boob",
+        "fuckboy", "shag", "bang", "screw", "nut",
+        "jizz", "clit", "boner", "horny", "thot",
+        "smut", "skank", "slut", "pimp", "dildo",
+        "nigger", "nigga", "coon", "spic", "chink",
+        "gook", "kike", "wetback", "jap", "paki",
+        "raghead", "cracker", "redskin", "negro", "slant",
+        "dago", "wop", "gypsy", "mick", "yid",
+        "beaner", "cholo", "zip", "oreo", "towelhead",
+        "cameljockey", "gringo", "honky", "junglebunny", "sandnigger",
+        "retard", "cripple", "tranny", "dyke", "queer",
+        "homo", "sperg", "autist", "mong", "spaz",
+        "idiot", "moron", "dumbass", "shithead", "piss",
+        "lame", "freak", "weirdo", "psycho", "nutjob",
+        "fairy", "pansy", "sissy", "perv", "creep",
+        "fuk", "sh1t", "azz", "b1tch", "d1ck",
+        "p0rn", "c0ck", "pu55y", "n1gger", "f4g",
+        "sh!t", "a$$", "b!tch", "d!ck", "p0rno",
+        "c*nt", "f*ck", "n*gga", "r*tard", "tr*nny"
     ]
 
     def __init__(self, bot):
         self.bot = bot
         self.data_dir = "data"
         os.makedirs(self.data_dir, exist_ok=True)
-        self.settings_file = os.path.join(self.data_dir, "automod_data.json")
+        self.db_file = os.path.join(self.data_dir, "automod_data.db")
+        self.setup_database()
         self.settings = self.load_settings()
         self.url_pattern = re.compile(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+')
         self.automod_task.start()
 
+    def setup_database(self):
+        """Create the SQLite database and table if they don't exist."""
+        with sqlite3.connect(self.db_file) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS guild_settings (
+                    guild_id TEXT PRIMARY KEY,
+                    enabled INTEGER DEFAULT 0,
+                    banned_words TEXT DEFAULT '[]',
+                    mute_threshold INTEGER DEFAULT 5,
+                    ban_threshold INTEGER DEFAULT 10,
+                    mute_duration INTEGER DEFAULT 60,
+                    warnings TEXT DEFAULT '[]',
+                    log_channel TEXT,
+                    ban_default_offensive INTEGER DEFAULT 0
+                )
+            """)
+            conn.commit()
+
     def load_settings(self):
-        if os.path.exists(self.settings_file):
-            with open(self.settings_file, "r") as f:
-                try:
-                    settings = json.load(f)
-                    for guild_id in settings:
-                        if "ban_default_offensive" not in settings[guild_id]:
-                            settings[guild_id]["ban_default_offensive"] = False
-                        if not isinstance(settings[guild_id].get("warnings"), list):
-                            settings[guild_id]["warnings"] = [{"reason": "Legacy warning", "issuer": "Unknown", "timestamp": datetime.utcnow().isoformat(), "user_id": "unknown"}] if settings[guild_id].get("warnings", 0) > 0 else []
-                    return settings
-                except json.JSONDecodeError:
-                    return {}
-        return {}
+        """Load all settings from the database into a dictionary."""
+        settings = {}
+        with sqlite3.connect(self.db_file) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM guild_settings")
+            rows = cursor.fetchall()
+            for row in rows:
+                guild_id = row[0]
+                settings[guild_id] = {
+                    "enabled": bool(row[1]),
+                    "banned_words": json.loads(row[2]),
+                    "mute_threshold": row[3],
+                    "ban_threshold": row[4],
+                    "mute_duration": row[5],
+                    "warnings": json.loads(row[6]),
+                    "log_channel": row[7],
+                    "ban_default_offensive": bool(row[8])
+                }
+        return settings
 
     def save_settings(self):
-        with open(self.settings_file, "w") as f:
-            json.dump(self.settings, f, indent=4)
+        """Save all settings to the database."""
+        with sqlite3.connect(self.db_file) as conn:
+            cursor = conn.cursor()
+            for guild_id, data in self.settings.items():
+                cursor.execute("""
+                    INSERT OR REPLACE INTO guild_settings (
+                        guild_id, enabled, banned_words, mute_threshold, ban_threshold,
+                        mute_duration, warnings, log_channel, ban_default_offensive
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    guild_id,
+                    int(data["enabled"]),
+                    json.dumps(data["banned_words"]),
+                    data["mute_threshold"],
+                    data["ban_threshold"],
+                    data["mute_duration"],
+                    json.dumps(data["warnings"]),
+                    data["log_channel"],
+                    int(data["ban_default_offensive"])
+                ))
+            conn.commit()
 
     def get_guild_settings(self, guild_id):
+        """Get or initialize settings for a specific guild."""
         guild_id_str = str(guild_id)
         if guild_id_str not in self.settings:
             self.settings[guild_id_str] = {
@@ -291,26 +327,14 @@ class AutoModeration(commands.Cog):
                 "log_channel": None,
                 "ban_default_offensive": False
             }
-        else:
-            if "warn_threshold" in self.settings[guild_id_str] and "mute_threshold" not in self.settings[guild_id_str]:
-                self.settings[guild_id_str]["mute_threshold"] = self.settings[guild_id_str].pop("warn_threshold")
-            if "mute_threshold" not in self.settings[guild_id_str]:
-                self.settings[guild_id_str]["mute_threshold"] = 5
-            if "ban_threshold" not in self.settings[guild_id_str]:
-                self.settings[guild_id_str]["ban_threshold"] = 10
-            if "mute_duration" not in self.settings[guild_id_str]:
-                self.settings[guild_id_str]["mute_duration"] = 60
-            if "warnings" not in self.settings[guild_id_str] or not isinstance(self.settings[guild_id_str]["warnings"], list):
-                self.settings[guild_id_str]["warnings"] = [{"reason": "Legacy warning", "issuer": "Unknown", "timestamp": datetime.utcnow().isoformat(), "user_id": "unknown"}] if self.settings[guild_id_str].get("warnings", 0) > 0 else []
-            if "enabled" not in self.settings[guild_id_str]:
-                self.settings[guild_id_str]["enabled"] = False
-            if "banned_words" not in self.settings[guild_id_str]:
-                self.settings[guild_id_str]["banned_words"] = []
-            if "log_channel" not in self.settings[guild_id_str]:
-                self.settings[guild_id_str]["log_channel"] = None
-            if "ban_default_offensive" not in self.settings[guild_id_str]:
-                self.settings[guild_id_str]["ban_default_offensive"] = False
-        self.save_settings()
+            with sqlite3.connect(self.db_file) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO guild_settings (guild_id) VALUES (?)
+                    ON CONFLICT(guild_id) DO NOTHING
+                """, (guild_id_str,))
+                conn.commit()
+            self.save_settings()
         return self.settings[guild_id_str]
 
     def create_embed(self, title, description, color=discord.Color.blue(), fields=None):
