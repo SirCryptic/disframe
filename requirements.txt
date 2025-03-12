@@ -5,3 +5,5 @@ python-dotenv
 discord.py==2.4.0
 psutil==6.1.1
 googletrans==4.0.0-rc1
+psutil==6.1.1
+sqlalchemy
