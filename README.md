@@ -29,7 +29,7 @@ DisFrame is a versatile, extensible Discord bot framework built with Python and 
 
 ## Requirements
 
-- Python 3.8 or higher
+- Python 3.11 or higher
 - Required libraries: See `requirements.txt` for details
 - A valid Discord bot token
 
