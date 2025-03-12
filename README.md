@@ -84,7 +84,7 @@ Add new commands by placing Python cog files in the `cmds` directory. DisFrame l
 
 - **General**: `-info`, `-serverinfo`, `-profile`, `-translate`, `-status`
 - **Moderation**: `-kick`, `-ban`, `-mute`, `-warn`, `-automod`, `-setuprolereaction`, `-setup`
-- **Admin/Dev**: `-lock`, `-unlock`, `-toggle_dm`, `-modules`, `-add_subscription`, `-remove_subscription`
+- **Admin/Dev**: `-lock`, `-unlock`, `-toggle_dm`, `-modules`, `-subscriptions`
 - **Fun**: `-meme`, `-creatememe`
 - **Games**: See examples in the [community cogs repo](https://github.com/SirCryptic/disframe-cogs) (e.g., CoinRush, Space Miner) although there are revamped / improved example/s in this version as of 12/03/2025
 - **Help**: `-help` for an interactive, paginated menu
