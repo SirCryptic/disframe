@@ -7,7 +7,7 @@ from discord.ext import commands, tasks
 from datetime import datetime, UTC
 from dotenv import load_dotenv
 import config
-from config import BOT_PREFIX, DEV_ROLE, BOT_USER_ROLE, MOD_ROLE, SERVER_INVITE_LINK, OWNER_ID, DEV_IDS, SUBSCRIPTION_ROLE, BOT_NAME, BOT_VERSION
+from config import BOT_PREFIX, DEV_ROLE, BOT_USER_ROLE, MOD_ROLE, SERVER_INVITE_LINK, OWNER_ID, DEV_IDS, SUBSCRIPTION_ROLE, BOT_NAME, BOT_VERSION, ROLE_COLORS
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -33,8 +33,11 @@ bot = commands.AutoShardedBot(command_prefix=BOT_PREFIX, intents=intents, case_i
 
 # Global bot settings with defaults
 bot_locked = False
-ALLOWED_DM = True  # Default value if JSON file doesn't exist
+ALLOWED_DM = True
 SETTINGS_FILE = "data/bot_settings.json"
+
+# Store SubscriptionManager instance globally
+bot.subscribers = None
 
 def load_settings():
     """Load bot settings from JSON file, create it if not present."""
@@ -46,18 +49,17 @@ def load_settings():
             with open(SETTINGS_FILE, "r") as f:
                 data = json.load(f)
                 bot_locked = data.get("locked", False)
-                ALLOWED_DM = data.get("allowed_dm", True)  # Default to True if not in JSON
+                ALLOWED_DM = data.get("allowed_dm", True)
         except (json.JSONDecodeError, IOError) as e:
             logger.error(f"Failed to load settings: {e}")
             bot_locked = False
-            ALLOWED_DM = True  # Fallback to defaults on error
-            save_settings()  # Create a new file with defaults
+            ALLOWED_DM = True
+            save_settings()
     else:
-        # File doesn't exist, create it with defaults
         bot_locked = False
         ALLOWED_DM = True
         save_settings()
-        logger.info(f"[INFO] Created new settings file with defaults: locked={bot_locked}, allowed_dm={ALLOWED_DM}")
+        logger.info(f"Created new settings file with defaults: locked={bot_locked}, allowed_dm={ALLOWED_DM}")
 
 def save_settings():
     """Save bot settings to JSON file."""
@@ -70,57 +72,6 @@ def save_settings():
             json.dump(settings, f, indent=4)
     except IOError as e:
         logger.error(f"Failed to save settings: {e}")
-
-# Subscription IDs
-class SubscriptionManager:
-    def __init__(self, file_path="data/subscription_ids.json"):
-        self.file_path = file_path
-        self.subscribers = self._load()
-
-    def _load(self):
-        """Load subscription IDs from JSON file."""
-        os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
-        if os.path.exists(self.file_path):
-            try:
-                with open(self.file_path, "r") as f:
-                    data = json.load(f)
-                    return set(data.get("SUBSCRIPTION_IDS", []))  # Use set for O(1) lookups
-            except (json.JSONDecodeError, IOError) as e:
-                logger.error(f"Failed to load subscription IDs: {e}")
-                return set()
-        return set()
-
-    def save(self):
-        """Save subscription IDs to JSON file."""
-        try:
-            with open(self.file_path, "w") as f:
-                json.dump({"SUBSCRIPTION_IDS": list(self.subscribers)}, f, indent=4)
-        except IOError as e:
-            logger.error(f"Failed to save subscription IDs: {e}")
-
-    def add(self, user_id):
-        """Add a subscriber."""
-        self.subscribers.add(user_id)
-        self.save()
-
-    def remove(self, user_id):
-        """Remove a subscriber."""
-        self.subscribers.discard(user_id)  # discard avoids KeyError
-        self.save()
-
-    def contains(self, user_id):
-        """Check if a user is subscribed."""
-        return user_id in self.subscribers
-
-subscriptions = SubscriptionManager()
-
-# Role colors
-ROLE_COLORS = {
-    DEV_ROLE: discord.Color.gold(),
-    SUBSCRIPTION_ROLE: discord.Color.purple(),
-    BOT_USER_ROLE: discord.Color.blue(),
-    MOD_ROLE: discord.Color.green()
-}
 
 def get_total_member_count():
     """Calculate total member count across all guilds."""
@@ -153,12 +104,12 @@ async def change_status():
             if bot_locked:
                 await asyncio.sleep(60)
                 break
-            await asyncio.sleep(15)  # Shorter interval for smoother rotation
+            await asyncio.sleep(15)
     except Exception as e:
         logger.error(f"Status change failed: {e}")
 
-async def load_commands():
-    """Recursively load command files from cmds/ directory."""
+async def load_all_cogs():
+    """Load all cogs from the cmds/ directory at startup."""
     loaded_cogs = 0
     for root, _, files in os.walk("cmds"):
         for file in files:
@@ -167,30 +118,35 @@ async def load_commands():
                 try:
                     await bot.load_extension(module_name)
                     loaded_cogs += 1
+                    logger.info(f"Loaded cog: {module_name}")
+                except commands.ExtensionNotFound:
+                    logger.error(f"Cog {module_name} not found.")
+                except commands.ExtensionFailed as e:
+                    logger.error(f"Cog {module_name} failed to load: {e}")
                 except Exception as e:
-                    logger.error(f"Failed to load cog {module_name}: {e}")
-    logger.info(f"[INFO] Loaded {loaded_cogs} cog(s)")  # Only log total count
+                    logger.error(f"Unexpected error loading cog {module_name}: {e}")
+    logger.info(f"Successfully loaded {loaded_cogs} cog(s)")
 
 @bot.event
 async def on_ready():
-    """Handle bot startup."""
-    load_settings()  # Load lock and DM settings on startup
+    """Handle bot startup with all cogs preloaded."""
+    load_settings()
     guilds = len(bot.guilds)
     members = get_total_member_count()
     shards = bot.shard_count or 1
-    logger.info(f"[INFO] Logged in as {bot.user} ({bot.user.id}) on {guilds} guild(s) with {shards} shard(s) and {members} members")
-    logger.info(f"[INFO] Bot lock status: {'locked' if bot_locked else 'unlocked'}")
-    logger.info(f"[INFO] DM status: {'enabled' if ALLOWED_DM else 'disabled'}")
-    bot.remove_command("help")
-    await load_commands()
-    logger.info(f"[INFO] {bot.user} is ready!")
+    logger.info(f"Logged in as {bot.user} ({bot.user.id}) on {guilds} guild(s) with {shards} shard(s) and {members} members")
+    logger.info(f"Bot lock status: {'locked' if bot_locked else 'unlocked'}")
+    logger.info(f"DM status: {'enabled' if ALLOWED_DM else 'disabled'}")
+    bot.remove_command("help")  # Remove default help to use custom one
+    await load_all_cogs()  # Preload all cogs
+    logger.info(f"{bot.user} is ready!")
     if not change_status.is_running():
         change_status.start()
 
 @bot.event
 async def on_guild_join(guild):
     """Handle bot joining a new guild."""
-    logger.info(f"[INFO] Joined new guild: {guild.name} ({guild.id})")
+    logger.info(f"Joined new guild: {guild.name} ({guild.id})")
     embed = discord.Embed(
         title="🤖 Bot Joined!",
         description=f"Hello! I’ve joined **{guild.name}**. Any admin can set up roles by granting me **Manage Roles** permissions and running `{BOT_PREFIX}setup`.",
@@ -204,18 +160,16 @@ async def on_guild_join(guild):
     if owner:
         try:
             await owner.send(embed=embed)
-            logger.info(f"[INFO] DM sent to {owner.name}#{owner.discriminator} for {guild.name}")
+            logger.info(f"DM sent to {owner.name}#{owner.discriminator} for {guild.name}")
         except discord.Forbidden:
             logger.warning(f"Could not DM {owner.name}#{owner.discriminator} - falling back to guild")
             target_channel = guild.system_channel or next((ch for ch in guild.text_channels if ch.permissions_for(guild.me).send_messages), None)
             if target_channel:
                 try:
                     await target_channel.send(embed=embed)
-                    logger.info(f"[INFO] Notified {guild.name} in {target_channel.name}")
+                    logger.info(f"Notified {guild.name} in {target_channel.name}")
                 except discord.Forbidden:
                     logger.warning(f"Could not send message in {guild.name} - insufficient permissions")
-            else:
-                logger.warning(f"No suitable channel in {guild.name} to send notification")
 
 @bot.command(name="setup")
 @commands.has_permissions(administrator=True)
@@ -234,7 +188,7 @@ async def setup_roles(ctx):
         "BOT_USER_ROLE": (BOT_USER_ROLE, ROLE_COLORS.get(BOT_USER_ROLE)),
         "MOD_ROLE": (MOD_ROLE, ROLE_COLORS.get(MOD_ROLE))
     }
-    if ctx.author.id in {OWNER_ID, *DEV_IDS}:  # More concise check
+    if ctx.author.id in {OWNER_ID, *DEV_IDS}:
         roles_to_configure.update({
             "DEV_ROLE": (DEV_ROLE, ROLE_COLORS.get(DEV_ROLE)),
             "SUBSCRIPTION_ROLE": (SUBSCRIPTION_ROLE, ROLE_COLORS.get(SUBSCRIPTION_ROLE))
@@ -251,7 +205,7 @@ async def setup_roles(ctx):
             except discord.Forbidden as e:
                 await ctx.send(embed=discord.Embed(
                     title="❌ Setup Failed",
-                    description=f"Cannot create `{role_name}`. Ensure I have **Manage Roles** permission and my role is above others. Error: {str(e)}",
+                    description=f"Cannot create `{role_name}`. Ensure I have **Manage Roles** permission. Error: {str(e)}",
                     color=discord.Color.red(),
                     timestamp=datetime.now(UTC)
                 ).set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/12724/12724695.png").set_footer(text=f"{BOT_NAME} v{BOT_VERSION}"))
@@ -265,7 +219,7 @@ async def setup_roles(ctx):
                 except discord.Forbidden as e:
                     await ctx.send(embed=discord.Embed(
                         title="❌ Setup Failed",
-                        description=f"Cannot edit `{role_name}`. My role must be above `{role_name}` and have **Manage Roles**. Error: {str(e)}",
+                        description=f"Cannot edit `{role_name}`. Ensure my role is above `{role_name}`. Error: {str(e)}",
                         color=discord.Color.red(),
                         timestamp=datetime.now(UTC)
                     ).set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/12724/12724695.png").set_footer(text=f"{BOT_NAME} v{BOT_VERSION}"))
@@ -303,14 +257,20 @@ async def setup_roles(ctx):
 
 @bot.event
 async def on_message(message):
-    """Handle incoming messages, including DM checks."""
+    """Handle incoming messages, allowing subscribers to bypass DM lock via ID check."""
     if message.author.bot:
         return
 
-    if not message.guild and not ALLOWED_DM and message.author.id not in {OWNER_ID, *DEV_IDS, *subscriptions.subscribers}:
+    # Check if user is a subscriber by ID in the database
+    is_subscriber = False
+    if bot.subscribers and not ALLOWED_DM:  # Only check if DMs are disabled
+        is_subscriber = bot.subscribers.contains(message.author.id)
+
+    # Allow DMs for owner, devs, and subscribers even if ALLOWED_DM is False
+    if not message.guild and not ALLOWED_DM and message.author.id not in {OWNER_ID, *DEV_IDS} and not is_subscriber:
         await message.author.send(embed=discord.Embed(
             title="❌ DMs Not Supported",
-            description=f"I can’t process commands in DMs.\nJoin my server: [Click here]({SERVER_INVITE_LINK})\nUse `{BOT_PREFIX}help` there.",
+            description=f"I can’t process commands in DMs unless you’re a subscriber.\nJoin my server: [Click here]({SERVER_INVITE_LINK})\nUse `{BOT_PREFIX}help` there.",
             color=discord.Color.red(),
             timestamp=datetime.now(UTC)
         ).set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/12724/12724695.png").set_footer(text=f"{BOT_NAME} v{BOT_VERSION}"))
@@ -328,7 +288,7 @@ async def lock(ctx):
         embed.title, embed.description, embed.color = "🔒 Bot Already Locked", "The bot is already locked.", discord.Color.orange()
     else:
         bot_locked = True
-        save_settings()  # Save updated settings
+        save_settings()
         embed.title, embed.description, embed.color = "🔒 Bot Locked", "The bot is now locked. Only owner/devs can use commands.", discord.Color.red()
         if change_status.is_running():
             change_status.restart()
@@ -344,7 +304,7 @@ async def unlock(ctx):
         embed.title, embed.description, embed.color = "🔓 Bot Already Unlocked", "The bot is already unlocked.", discord.Color.orange()
     else:
         bot_locked = False
-        save_settings()  # Save updated settings
+        save_settings()
         embed.title, embed.description, embed.color = "🔓 Bot Unlocked", "The bot is now unlocked for all users.", discord.Color.green()
         if change_status.is_running():
             change_status.restart()
@@ -356,23 +316,23 @@ async def toggle_dm(ctx):
     """Toggle DM allowance for non-privileged users."""
     global ALLOWED_DM
     ALLOWED_DM = not ALLOWED_DM
-    save_settings()  # Save updated settings
+    save_settings()
     embed = discord.Embed(
         title="✅ DM Setting Updated",
-        description=f"DMs are now **{'enabled' if ALLOWED_DM else 'disabled'}** for non-privileged users.",
+        description=f"DMs are now **{'enabled' if ALLOWED_DM else 'disabled'}** for non-privileged users. Subscribers can still DM me.",
         color=discord.Color.green(),
         timestamp=datetime.now(UTC)
     ).set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/12724/12724695.png").set_footer(text=f"{BOT_NAME} v{BOT_VERSION}")
     await ctx.send(embed=embed)
     if change_status.is_running():
-        change_status.restart()  # Reflect DM status change immediately
+        change_status.restart()
 
 @bot.command(name="status")
 async def status(ctx):
     """Display the bot's lock and DM status."""
     await ctx.send(embed=discord.Embed(
         title="🔍 Bot Status",
-        description=f"The bot is currently **{'locked' if bot_locked else 'unlocked'}**.\nDMs are **{'enabled' if ALLOWED_DM else 'disabled'}** for non-privileged users.",
+        description=f"The bot is currently **{'locked' if bot_locked else 'unlocked'}**.\nDMs are **{'enabled' if ALLOWED_DM else 'disabled'}** for non-privileged users (subscribers exempt).",
         color=discord.Color.red() if bot_locked else discord.Color.green(),
         timestamp=datetime.now(UTC)
     ).set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/12724/12724695.png").set_footer(text=f"{BOT_NAME} v{BOT_VERSION}"))
@@ -422,85 +382,27 @@ async def on_command_error(ctx, error):
     except discord.Forbidden:
         pass
 
-@bot.command(name="add_subscription")
-@commands.check(lambda ctx: ctx.author.id in {OWNER_ID, *DEV_IDS})
-async def add_subscription(ctx, user_id: int = None):
-    """Add a user to the subscription list."""
-    embed = discord.Embed(timestamp=datetime.now(UTC)).set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/12724/12724695.png").set_footer(text=f"{BOT_NAME} v{BOT_VERSION}")
-    if user_id is None:
-        embed.title, embed.description, embed.color = "📝 Add Subscription", f"Usage: `{BOT_PREFIX}add_subscription <user_id>`\nExample: `{BOT_PREFIX}add_subscription 1234567890`", discord.Color.blue()
-    elif subscriptions.contains(user_id):
-        embed.title, embed.description, embed.color = "❌ Already Subscribed", f"User ID `{user_id}` is already subscribed.", discord.Color.red()
-    else:
-        subscriptions.add(user_id)
-        assigned = False
-        for guild in bot.guilds:
-            member = guild.get_member(user_id)
-            if member:
-                role = discord.utils.get(guild.roles, name=SUBSCRIPTION_ROLE)
-                if not role and (ctx.author.id in {OWNER_ID, *DEV_IDS}):
-                    try:
-                        role = await guild.create_role(name=SUBSCRIPTION_ROLE, color=ROLE_COLORS[SUBSCRIPTION_ROLE], reason=f"Subscription by {ctx.author}")
-                    except discord.Forbidden as e:
-                        embed.title, embed.description, embed.color = "❌ Permission Error", f"Cannot create `{SUBSCRIPTION_ROLE}` in {guild.name}. Error: {str(e)}", discord.Color.red()
-                        await ctx.send(embed=embed)
-                        return
-                if role:
-                    try:
-                        await member.add_roles(role)
-                        assigned = True
-                        break
-                    except discord.Forbidden as e:
-                        embed.title, embed.description, embed.color = "❌ Permission Error", f"Cannot assign `{SUBSCRIPTION_ROLE}` in {guild.name}. Error: {str(e)}", discord.Color.red()
-                        await ctx.send(embed=embed)
-                        return
-        embed.title, embed.description, embed.color = "✅ Subscription Added", f"User ID `{user_id}` added{' and assigned ' + SUBSCRIPTION_ROLE if assigned else ', but not found in any guild'}.", discord.Color.green() if assigned else discord.Color.orange()
-    await ctx.send(embed=embed)
-
-@bot.command(name="remove_subscription")
-@commands.check(lambda ctx: ctx.author.id in {OWNER_ID, *DEV_IDS})
-async def remove_subscription(ctx, user_id: str = None):
-    """Remove a user from the subscription list."""
-    embed = discord.Embed(timestamp=datetime.now(UTC)).set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/12724/12724695.png").set_footer(text=f"{BOT_NAME} v{BOT_VERSION}")
-    if user_id is None:
-        embed.title, embed.description, embed.color = "📝 Remove Subscription", f"Usage: `{BOT_PREFIX}remove_subscription <user_id>`\nExample: `{BOT_PREFIX}remove_subscription 1234567890`", discord.Color.blue()
-    else:
+async def start_bot():
+    """Start the bot with rate limit handling."""
+    retries = 0
+    max_retries = 5
+    while retries < max_retries:
         try:
-            user_id_int = int(user_id.strip('<@!>'))
-            if not subscriptions.contains(user_id_int):
-                embed.title, embed.description, embed.color = "❌ Not Subscribed", f"User ID `{user_id_int}` is not subscribed.", discord.Color.red()
+            await bot.start(TOKEN)
+            break
+        except discord.HTTPException as e:
+            if e.status == 429: 
+                wait_time = 2 ** retries + 1 
+                logger.warning(f"Rate limited (429). Retrying in {wait_time} seconds...")
+                await asyncio.sleep(wait_time)
+                retries += 1
             else:
-                subscriptions.remove(user_id_int)
-                removed = False
-                for guild in bot.guilds:
-                    member = guild.get_member(user_id_int)
-                    if member:
-                        role = discord.utils.get(guild.roles, name=SUBSCRIPTION_ROLE)
-                        if role:
-                            try:
-                                await member.remove_roles(role)
-                                removed = True
-                                break
-                            except discord.Forbidden as e:
-                                embed.title, embed.description, embed.color = "❌ Permission Error", f"Cannot remove `{SUBSCRIPTION_ROLE}` in {guild.name}. Error: {str(e)}", discord.Color.red()
-                                await ctx.send(embed=embed)
-                                return
-                embed.title, embed.description, embed.color = "✅ Subscription Removed", f"User ID `{user_id_int}` removed{' and ' + SUBSCRIPTION_ROLE + ' removed' if removed else ', but not found in any guild'}.", discord.Color.green() if removed else discord.Color.orange()
-        except ValueError:
-            embed.title, embed.description, embed.color = "❌ Invalid User ID", "Please provide a valid numeric user ID or mention.", discord.Color.red()
-    await ctx.send(embed=embed)
+                logger.error(f"Failed to start bot: {e}")
+                raise
+        except Exception as e:
+            logger.error(f"Unexpected error starting bot: {e}")
+            raise
 
-@bot.command(name="check_subscription")
-async def check_subscription(ctx, user_id: int = None):
-    """Check subscription status of a user."""
-    user_id = user_id or ctx.author.id
-    is_subscribed = subscriptions.contains(user_id)
-    await ctx.send(embed=discord.Embed(
-        title="📋 Subscription Status",
-        description=f"User ID `{user_id}` is **{'subscribed' if is_subscribed else 'not subscribed'}**.",
-        color=discord.Color.green() if is_subscribed else discord.Color.red(),
-        timestamp=datetime.now(UTC)
-    ).set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/12724/12724695.png").set_footer(text=f"{BOT_NAME} v{BOT_VERSION}"))
-
-# Run the bot
-bot.run(TOKEN)
+# Run the bot with asyncio
+if __name__ == "__main__":
+    asyncio.run(start_bot())
